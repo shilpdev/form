@@ -1,0 +1,47 @@
+{
+  "name": "@shilpdev/form",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Headless CRUD form components for React and Vue: read, create, update, delete, archive and unarchive an item from one schema, with your own markup.",
+  "packageManager": "pnpm@11.9.0",
+  "scripts": {
+    "dev": "pnpm --filter \"./apps/*\" run --parallel dev",
+    "dev:next": "pnpm --filter ./apps/next-demo run dev",
+    "dev:nuxt": "pnpm --filter ./apps/nuxt-demo run dev",
+    "build": "pnpm build:packages && pnpm build:apps",
+    "build:packages": "pnpm build:react-form && pnpm build:vue-form",
+    "build:react-form": "pnpm --filter @shilp.dev/react-form build",
+    "build:vue-form": "pnpm --filter @shilp.dev/vue-form build",
+    "build:apps": "pnpm --filter \"./apps/*\" run build",
+    "build:next": "pnpm --filter ./apps/next-demo run build",
+    "build:nuxt": "pnpm --filter ./apps/nuxt-demo run build",
+    "start:next": "pnpm --filter ./apps/next-demo run start",
+    "start:nuxt": "pnpm --filter ./apps/nuxt-demo run preview",
+    "typecheck": "pnpm --filter \"./packages/*\" run typecheck",
+    "lint": "pnpm --filter \"./packages/*\" run lint",
+    "format": "pnpm --filter \"./packages/*\" run format"
+  },
+  "keywords": [
+    "react",
+    "react-form",
+    "nextjs",
+    "vue",
+    "vue-form",
+    "nuxtjs",
+    "form",
+    "forms",
+    "headless",
+    "dynamic-form",
+    "form-builder",
+    "schema",
+    "crud",
+    "validation",
+    "admin",
+    "dashboard"
+  ],
+  "author": "7Span (https://7span.com)",
+  "license": "MIT",
+  "devDependencies": {
+    "fast-deep-equal": "^3.1.3"
+  }
+}

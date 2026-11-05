@@ -1,0 +1,27 @@
+{
+  "name": "nuxt-demo",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nuxt dev --port 3007",
+    "build": "nuxt build",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview --port 3007",
+    "postinstall": "nuxt prepare",
+    "typecheck": "nuxt typecheck"
+  },
+  "dependencies": {
+    "@nuxt/ui": "^4.12.0",
+    "@shilp.dev/vue-form": "workspace:*",
+    "nuxt": "^4.6.3",
+    "tailwindcss": "^4.3.3",
+    "vue": "^3.5.44",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@iconify-json/mdi": "^1.2.3",
+    "typescript": "^5.9.3",
+    "vue-tsc": "^3.3.14"
+  }
+}

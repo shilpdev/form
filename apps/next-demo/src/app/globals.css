@@ -1,0 +1,79 @@
+@import 'tailwindcss';
+
+/* Toggled by the color mode button (see components/color-mode.ts). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Nuxt UI's neutral design tokens with the Nuxt demo's monochrome primary, so this app matches the
+ * Nuxt demo: `text-default`, `text-muted`, `text-highlighted`, `bg-default`, `bg-elevated`,
+ * `border-default`, `text-primary` and so on.
+ */
+:root {
+  --ui-primary: black;
+  --ui-text-dimmed: var(--color-neutral-400);
+  --ui-text-muted: var(--color-neutral-500);
+  --ui-text-toned: var(--color-neutral-600);
+  --ui-text: var(--color-neutral-700);
+  --ui-text-highlighted: var(--color-neutral-900);
+  --ui-text-inverted: var(--color-white);
+  --ui-bg: var(--color-white);
+  --ui-bg-muted: var(--color-neutral-50);
+  --ui-bg-elevated: var(--color-neutral-100);
+  --ui-bg-accented: var(--color-neutral-200);
+  --ui-bg-inverted: var(--color-neutral-900);
+  --ui-border: var(--color-neutral-200);
+  --ui-border-accented: var(--color-neutral-300);
+}
+
+.dark {
+  color-scheme: dark;
+  --ui-primary: white;
+  --ui-text-dimmed: var(--color-neutral-500);
+  --ui-text-muted: var(--color-neutral-400);
+  --ui-text-toned: var(--color-neutral-300);
+  --ui-text: var(--color-neutral-200);
+  --ui-text-highlighted: var(--color-white);
+  --ui-text-inverted: var(--color-neutral-900);
+  --ui-bg: var(--color-neutral-900);
+  --ui-bg-muted: var(--color-neutral-800);
+  --ui-bg-elevated: var(--color-neutral-800);
+  --ui-bg-accented: var(--color-neutral-700);
+  --ui-bg-inverted: var(--color-white);
+  --ui-border: var(--color-neutral-800);
+  --ui-border-accented: var(--color-neutral-700);
+}
+
+@theme inline {
+  --font-sans: 'Google Sans Flex', sans-serif;
+  --font-mono: 'Google Sans Code', monospace;
+
+  --color-primary: var(--ui-primary);
+  --text-color-dimmed: var(--ui-text-dimmed);
+  --text-color-muted: var(--ui-text-muted);
+  --text-color-toned: var(--ui-text-toned);
+  --text-color-default: var(--ui-text);
+  --text-color-highlighted: var(--ui-text-highlighted);
+  --text-color-inverted: var(--ui-text-inverted);
+  --background-color-default: var(--ui-bg);
+  --background-color-muted: var(--ui-bg-muted);
+  --background-color-elevated: var(--ui-bg-elevated);
+  --background-color-accented: var(--ui-bg-accented);
+  --background-color-inverted: var(--ui-bg-inverted);
+  --border-color-default: var(--ui-border);
+  --border-color-accented: var(--ui-border-accented);
+  --divide-color-default: var(--ui-border);
+  --ring-color-accented: var(--ui-border-accented);
+  --outline-color-primary: var(--ui-primary);
+  --outline-color-inverted: var(--ui-bg-inverted);
+}
+
+/* Default buttons rendered by the package (FormCreate, FormUpdate, ...). */
+.shilp-form button {
+  @apply rounded-md bg-primary px-2.5 py-1.5 text-sm font-medium text-inverted transition-colors hover:bg-primary/75 disabled:opacity-75;
+}
+
+.shilp-form__delete button,
+.shilp-form__archive button,
+.shilp-form__unarchive button {
+  @apply bg-default text-default ring ring-accented ring-inset hover:bg-elevated;
+}

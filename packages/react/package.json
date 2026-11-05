@@ -1,0 +1,77 @@
+{
+  "name": "@shilp.dev/react-form",
+  "version": "0.1.0",
+  "description": "Headless CRUD forms: read, create, update, delete, archive and unarchive an item from one schema, with your own markup.",
+  "keywords": [
+    "react",
+    "react-form",
+    "form",
+    "forms",
+    "headless",
+    "dynamic-form",
+    "form-builder",
+    "schema",
+    "zod",
+    "crud",
+    "create",
+    "update",
+    "nextjs",
+    "validation",
+    "admin",
+    "dashboard"
+  ],
+  "homepage": "https://github.com/shilpdev/form/tree/main/packages/react#readme",
+  "bugs": {
+    "url": "https://github.com/shilpdev/form/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shilpdev/form.git",
+    "directory": "packages/react"
+  },
+  "license": "MIT",
+  "author": "7Span (https://7span.com)",
+  "type": "module",
+  "sideEffects": false,
+  "scripts": {
+    "build": "vite build",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write src/",
+    "lint": "eslint . --fix",
+    "prepublishOnly": "pnpm build"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@types/react": "^19.3.0",
+    "@vitejs/plugin-react": "^4.7.0",
+    "eslint": "^9.39.5",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "3.5.3",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.72.1",
+    "vite": "^6.4.5",
+    "vite-plugin-dts": "^4.5.4"
+  }
+}

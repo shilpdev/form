@@ -1,0 +1,80 @@
+{
+  "name": "@shilp.dev/vue-form",
+  "version": "0.1.0",
+  "description": "Headless CRUD forms: read, create, update, delete, archive and unarchive an item from one schema, with your own markup.",
+  "keywords": [
+    "vue",
+    "vue-form",
+    "form",
+    "forms",
+    "headless",
+    "dynamic-form",
+    "form-builder",
+    "schema",
+    "zod",
+    "crud",
+    "create",
+    "update",
+    "nuxtjs",
+    "validation",
+    "admin",
+    "dashboard"
+  ],
+  "homepage": "https://github.com/shilpdev/form/tree/main/packages/vue#readme",
+  "bugs": {
+    "url": "https://github.com/shilpdev/form/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shilpdev/form.git",
+    "directory": "packages/vue"
+  },
+  "license": "MIT",
+  "author": "7Span (https://7span.com)",
+  "type": "module",
+  "sideEffects": false,
+  "scripts": {
+    "build": "vite build",
+    "typecheck": "vue-tsc --noEmit",
+    "format": "prettier --write src/",
+    "lint": "eslint . --fix",
+    "prepublishOnly": "pnpm build"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "peerDependencies": {
+    "vue": "^3.5.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@vitejs/plugin-vue": "^5.2.4",
+    "@vue/eslint-config-prettier": "^10.2.0",
+    "eslint": "^9.39.5",
+    "eslint-plugin-vue": "~10.0.1",
+    "globals": "^16.5.0",
+    "jiti": "^2.7.0",
+    "prettier": "3.5.3",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.72.1",
+    "vite": "^6.4.5",
+    "vite-plugin-dts": "^4.5.4",
+    "vue": "^3.5.44",
+    "vue-tsc": "^3.3.14"
+  }
+}
