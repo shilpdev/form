@@ -2,26 +2,24 @@ import { createContext, useContext, type ReactNode } from 'react'
 import type { FormContext } from '@shared'
 import { CONTEXT_OUTSIDE_FORM_MESSAGE } from '@shared/messages'
 
-const FormContextValue = createContext<FormContext<unknown> | null>(null)
+const FormContextValue = createContext<FormContext | null>(null)
 
-export function FormContextProvider<Schema>({
+export function FormContextProvider({
   value,
   children,
 }: {
-  value: FormContext<Schema>
+  value: FormContext
   children: ReactNode
 }) {
   return (
-    <FormContextValue.Provider value={value as FormContext<unknown>}>
-      {children}
-    </FormContextValue.Provider>
+    <FormContextValue.Provider value={value as FormContext}>{children}</FormContextValue.Provider>
   )
 }
 
-export function useFormContext<Schema = unknown>(): FormContext<Schema> {
+export function useFormContext(): FormContext {
   const context = useContext(FormContextValue)
   if (!context) {
     throw new Error(CONTEXT_OUTSIDE_FORM_MESSAGE)
   }
-  return context as FormContext<Schema>
+  return context as FormContext
 }

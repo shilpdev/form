@@ -23,8 +23,3 @@ export const getErrorMessage = (error: { name: string; message: string }): strin
 export const getFieldNotFoundMessage = (name: string): string => {
   return `Field "${name}" not found in the schema`
 }
-
-/** Thrown by an action whose handler prop was not passed, e.g. `The "delete" handler is not provided`. */
-export const getMissingHandlerMessage = (handler: string): string => {
-  return `The "${handler}" handler is not provided`
-}

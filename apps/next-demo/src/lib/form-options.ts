@@ -6,9 +6,7 @@
 import type { Field, FormProps, FormState } from '@shilp.dev/react-form'
 import type { ZodObject } from 'zod'
 
-type Schema = ZodObject
-
-const schemaToFields = (schema: Schema | undefined): Field[] => {
+const schemaToFields = (schema: ZodObject | undefined): Field[] => {
   if (!schema) {
     return []
   }
@@ -17,11 +15,12 @@ const schemaToFields = (schema: Schema | undefined): Field[] => {
   })
 }
 
-const validateSchema = (state: FormState<Schema>) => {
-  if (!state.schema) {
+const validateSchema = async (state: FormState) => {
+  const schema = state.schema as ZodObject | undefined
+  if (!schema) {
     return
   }
-  const result = state.schema.safeParse(state.values)
+  const result = schema.safeParse(state.values)
   if (result.success) {
     return
   }
@@ -32,7 +31,7 @@ const validateSchema = (state: FormState<Schema>) => {
   throw { name: 'ValidationError', message: 'Please fix the highlighted fields.', errors }
 }
 
-export const formOptions: Pick<FormProps<Schema>, 'schemaToFields' | 'validateSchema'> = {
+export const formOptions: Pick<FormProps, 'schemaToFields' | 'validateSchema'> = {
   schemaToFields,
   validateSchema,
 }

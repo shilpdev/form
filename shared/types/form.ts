@@ -18,12 +18,12 @@ export interface ItemResponse {
 }
 
 /** Data only (no methods): handed to the handlers, `validateSchema` and `errorAdapter`. */
-export interface FormState<Schema = unknown> {
+export interface FormState {
   mode: FormMode
   itemId?: string | number
-  schema?: Schema
-  createSchema?: Schema
-  updateSchema?: Schema
+  schema?: unknown
+  createSchema?: unknown
+  updateSchema?: unknown
   /** The fields of the schema in use for the current mode, normalized. */
   fields: Field[]
   values: Values
@@ -66,53 +66,40 @@ export interface FormActions {
 }
 
 /** State plus actions: what every slot / render prop gets as `context`. */
-export type FormContext<Schema = unknown> = FormState<Schema> & FormActions
+export type FormContext = FormState & FormActions
 
-export type ItemHandler<Schema = unknown> = (state: FormState<Schema>) => Promise<ItemResponse>
+export type ItemHandler = (state: FormState) => Promise<ItemResponse>
 
 /*
- * The option props are written as methods so a function typed for one schema library (for example
- * `schemaToFields(schema: ZodObject | undefined)`) can be passed where `Schema` is `unknown`.
+ * `schema`, `createSchema` and `updateSchema` may each be a different type, so they are `unknown`:
+ * the library never reads them, only your `schemaToFields` and `validateSchema` do. The option props
+ * are written as methods so a function that narrows its argument (for example
+ * `schemaToFields(schema: ZodObject | undefined)`) can still be passed.
  */
-export interface FormPropsBase<Schema = unknown> {
+export interface FormPropsBase {
   itemId?: string | number
-  schema?: Schema
+  schema?: unknown
   /** Used instead of `schema` in create mode. */
-  createSchema?: Schema
+  createSchema?: unknown
   /** Used instead of `schema` in update mode. */
-  updateSchema?: Schema
-  read?: ItemHandler<Schema>
-  create?: ItemHandler<Schema>
-  update?: ItemHandler<Schema>
-  delete?: ItemHandler<Schema>
+  updateSchema?: unknown
+  read?: ItemHandler
+  create?: ItemHandler
+  update?: ItemHandler
+  delete?: ItemHandler
   /** Free-form data passed through to the handlers in `state.meta`. */
   meta?: Meta
   /** Decides create or update from the item id. */
   resolveMode?(input: { itemId?: string | number }): FormMode
   /** Turns your schema (Zod, Yup, an array, ...) into the list of fields. */
-  schemaToFields?(schema: Schema | undefined): Field[]
+  schemaToFields?(schema: unknown): Field[]
   /** Runs before `create` and `update`. Throw (or reject) to stop the request. */
-  validateSchema?(state: FormState<Schema>): Promise<unknown> | unknown
+  validateSchema?(state: FormState): Promise<unknown>
   /** Turns any thrown value into a `FormError`. */
-  errorAdapter?(error: unknown, state: FormState<Schema>): FormError
+  errorAdapter?(error: unknown, state: FormState): FormError
 }
 
 /** Scope of `Form`, `FormFields`, `FormError` and the action buttons. */
-export interface FormScope<Schema = unknown> {
-  context: FormContext<Schema>
-}
-
-export interface FormFieldPropsBase {
-  name: string
-}
-
-/** Scope of `FormField`: the context plus what it computes for one field. */
-export interface FieldScope<Schema = unknown> extends FormScope<Schema> {
-  field: Field
-  name: string
-  label: string
-  value: unknown
-  error: string | null
-  /** Sets this field's value (`setValue` bound to the field name). */
-  updateValue: (value: unknown) => void
+export interface FormScope {
+  context: FormContext
 }

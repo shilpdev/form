@@ -46,9 +46,11 @@ Every action (`readItem`, `createItem`, `updateItem`, `deleteItem`):
 
 1. Sets its flag (`isCreating`, ...) and so `isLoading`.
 2. Clears `error` and `fieldErrors`.
-3. Throws a "handler is not provided" error (handled in step 4) when the matching prop is missing.
-4. `createItem` and `updateItem` only: awaits `validateSchema(state)`. A throw goes to step 4 and the handler is not called.
-5. Calls the handler with the latest state. In React the state includes values set in the same event.
+3. `createItem` and `updateItem` only: calls `validateSchema(state)`. A rejection goes to step 5 and the handler is not called.
+4. Calls the handler with the latest state, then `onResponse` (step 3 below). In React the state includes values set in the same event.
+5. A rejection goes to `onError`: a `TypeError` is logged, and `errorAdapter(error, state)` sets `error` and `fieldErrors`. The flag is cleared at the end either way.
+
+The whole flow is one chain: `handler(state).then(onResponse).catch(onError).finally(...)`. The handler props you use must be passed: calling an action whose handler is missing throws a `TypeError` straight away.
 
 ### 3. Response
 

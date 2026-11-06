@@ -17,7 +17,6 @@ import {
   defaultSchemaToFields,
   defaultValidateSchema,
 } from '@shared/options'
-import { getMissingHandlerMessage } from '@shared/messages'
 import { FormContextProvider } from '../context/form-context'
 import type { FormProps } from '../types'
 import { Slot } from './slot'
@@ -43,7 +42,7 @@ const EMPTY_DATA: FormData = {
   response: null,
 }
 
-export function Form<Schema = unknown>(props: FormProps<Schema>) {
+export function Form(props: FormProps) {
   const {
     itemId,
     schema,
@@ -89,7 +88,7 @@ export function Form<Schema = unknown>(props: FormProps<Schema>) {
   const [isDeleting, _setIsDeleting] = useState(false)
   const isLoading = isReading || isCreating || isUpdating || isDeleting
 
-  const state: FormState<Schema> = {
+  const state: FormState = {
     mode,
     itemId,
     schema,
@@ -117,7 +116,7 @@ export function Form<Schema = unknown>(props: FormProps<Schema>) {
   stateRef.current = state
 
   /** The rendered state with the latest form data, for handlers that run after an `await`. */
-  const getState = (): FormState<Schema> => {
+  const getState = (): FormState => {
     const current = dataRef.current
     return {
       ...stateRef.current,
@@ -145,6 +144,14 @@ export function Form<Schema = unknown>(props: FormProps<Schema>) {
     }
   }
 
+  const onError = (error: unknown) => {
+    // A TypeError is a bug in the consumer's code, not an API error, so it is logged too.
+    if (error instanceof TypeError) {
+      console.error(error)
+    }
+    setError(errorAdapter(error, getState()))
+  }
+
   const onResponse = (response: ItemResponse) => {
     let patch: Partial<FormData> = { response }
     if (response.values) {
@@ -153,86 +160,50 @@ export function Form<Schema = unknown>(props: FormProps<Schema>) {
     commit(patch)
   }
 
-  const readItem = async () => {
+  const readItem = () => {
     _setIsReading(true)
     setError(null)
-    try {
-      if (!read) {
-        throw new Error(getMissingHandlerMessage('read'))
-      }
-      const response = await read(getState())
-      onResponse(response ?? {})
-    } catch (error) {
-      // A TypeError is a bug in the consumer's code, not an API error, so it is logged too.
-      if (error instanceof TypeError) {
-        console.error(error)
-      }
-      setError(errorAdapter(error, getState()))
-    } finally {
-      _setIsReading(false)
-    }
+    return read!(getState())
+      .then(onResponse)
+      .catch(onError)
+      .finally(() => {
+        _setIsReading(false)
+      })
   }
 
-  const createItem = async () => {
+  const createItem = () => {
     _setIsCreating(true)
     setError(null)
-    try {
-      if (!create) {
-        throw new Error(getMissingHandlerMessage('create'))
-      }
-      await validateSchema(getState())
-      const response = await create(getState())
-      onResponse(response ?? {})
-    } catch (error) {
-      // A TypeError is a bug in the consumer's code, not an API error, so it is logged too.
-      if (error instanceof TypeError) {
-        console.error(error)
-      }
-      setError(errorAdapter(error, getState()))
-    } finally {
-      _setIsCreating(false)
-    }
+    return validateSchema(getState())
+      .then(() => create!(getState()))
+      .then(onResponse)
+      .catch(onError)
+      .finally(() => {
+        _setIsCreating(false)
+      })
   }
 
-  const updateItem = async () => {
+  const updateItem = () => {
     _setIsUpdating(true)
     setError(null)
-    try {
-      if (!update) {
-        throw new Error(getMissingHandlerMessage('update'))
-      }
-      await validateSchema(getState())
-      const response = await update(getState())
-      onResponse(response ?? {})
-    } catch (error) {
-      // A TypeError is a bug in the consumer's code, not an API error, so it is logged too.
-      if (error instanceof TypeError) {
-        console.error(error)
-      }
-      setError(errorAdapter(error, getState()))
-    } finally {
-      _setIsUpdating(false)
-    }
+    return validateSchema(getState())
+      .then(() => update!(getState()))
+      .then(onResponse)
+      .catch(onError)
+      .finally(() => {
+        _setIsUpdating(false)
+      })
   }
 
-  const deleteItem = async () => {
+  const deleteItem = () => {
     _setIsDeleting(true)
     setError(null)
-    try {
-      if (!remove) {
-        throw new Error(getMissingHandlerMessage('delete'))
-      }
-      const response = await remove(getState())
-      onResponse(response ?? {})
-    } catch (error) {
-      // A TypeError is a bug in the consumer's code, not an API error, so it is logged too.
-      if (error instanceof TypeError) {
-        console.error(error)
-      }
-      setError(errorAdapter(error, getState()))
-    } finally {
-      _setIsDeleting(false)
-    }
+    return remove!(getState())
+      .then(onResponse)
+      .catch(onError)
+      .finally(() => {
+        _setIsDeleting(false)
+      })
   }
 
   const setValue = (name: string, value: unknown) => {
@@ -287,7 +258,7 @@ export function Form<Schema = unknown>(props: FormProps<Schema>) {
     initRef.current()
   }, [itemId])
 
-  const context: FormContext<Schema> = {
+  const context: FormContext = {
     ...state,
     readItem,
     createItem,

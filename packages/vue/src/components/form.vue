@@ -20,7 +20,6 @@ import {
   defaultSchemaToFields,
   defaultValidateSchema,
 } from '@shared/options'
-import { getMissingHandlerMessage } from '@shared/messages'
 import {
   addTouched,
   cloneValues,
@@ -83,31 +82,54 @@ const dirtyValues = computed(() => {
   return getDirtyValues(dirty.value, values.value)
 })
 
+/** The state keys of the context, defined once. The context spreads it, `getState` snapshots it. */
+const state: FormState = reactive({
+  //props
+  itemId: computed(() => {
+    return props.itemId
+  }),
+  schema: computed(() => {
+    return props.schema
+  }),
+  createSchema: computed(() => {
+    return props.createSchema
+  }),
+  updateSchema: computed(() => {
+    return props.updateSchema
+  }),
+  meta: computed(() => {
+    return props.meta
+  }),
+  fields,
+
+  // local state
+  mode,
+  values,
+  initialValues,
+  dirtyValues,
+  touched,
+  dirty,
+  error,
+  fieldErrors,
+  response,
+  isCreateMode,
+  isUpdateMode,
+  isLoading,
+  isReading,
+  isCreating,
+  isUpdating,
+  isDeleting,
+})
+
 /** A plain snapshot (no methods, no proxies) for the handlers, `validateSchema` and `errorAdapter`. */
 const getState = (): FormState => {
   return {
-    mode: mode.value,
-    itemId: props.itemId,
-    schema: props.schema,
-    createSchema: props.createSchema,
-    updateSchema: props.updateSchema,
-    fields: fields.value,
-    values: toRaw(values.value),
-    initialValues: toRaw(initialValues.value),
-    dirtyValues: dirtyValues.value,
-    touched: toRaw(touched.value),
-    dirty: toRaw(dirty.value),
-    error: error.value,
-    fieldErrors: toRaw(fieldErrors.value),
-    meta: props.meta,
-    response: response.value,
-    isCreateMode: isCreateMode.value,
-    isUpdateMode: isUpdateMode.value,
-    isLoading: isLoading.value,
-    isReading: isReading.value,
-    isCreating: isCreating.value,
-    isUpdating: isUpdating.value,
-    isDeleting: isDeleting.value,
+    ...state,
+    values: toRaw(state.values),
+    initialValues: toRaw(state.initialValues),
+    touched: toRaw(state.touched),
+    dirty: toRaw(state.dirty),
+    fieldErrors: toRaw(state.fieldErrors),
   }
 }
 
@@ -128,6 +150,14 @@ function setError(newError: FormError | null) {
   }
 }
 
+function onError(newError: unknown) {
+  // A TypeError is a bug in the consumer's code, not an API error, so it is logged too.
+  if (newError instanceof TypeError) {
+    console.error(newError)
+  }
+  setError(props.errorAdapter(newError, getState()))
+}
+
 function onResponse(newResponse: ItemResponse) {
   response.value = newResponse
   if (newResponse.values) {
@@ -135,86 +165,52 @@ function onResponse(newResponse: ItemResponse) {
   }
 }
 
-async function readItem() {
+function readItem() {
   isReading.value = true
   setError(null)
-  try {
-    if (!props.read) {
-      throw new Error(getMissingHandlerMessage('read'))
-    }
-    const response = await props.read(getState())
-    onResponse(response ?? {})
-  } catch (error) {
-    // A TypeError is a bug in the consumer's code, not an API error, so it is logged too.
-    if (error instanceof TypeError) {
-      console.error(error)
-    }
-    setError(props.errorAdapter(error, getState()))
-  } finally {
-    isReading.value = false
-  }
+  return props.read!(getState())
+    .then(onResponse)
+    .catch(onError)
+    .finally(() => {
+      isReading.value = false
+    })
 }
 
-async function createItem() {
+function createItem() {
   isCreating.value = true
   setError(null)
-  try {
-    if (!props.create) {
-      throw new Error(getMissingHandlerMessage('create'))
-    }
-    await props.validateSchema(getState())
-    const response = await props.create(getState())
-    onResponse(response ?? {})
-  } catch (error) {
-    // A TypeError is a bug in the consumer's code, not an API error, so it is logged too.
-    if (error instanceof TypeError) {
-      console.error(error)
-    }
-    setError(props.errorAdapter(error, getState()))
-  } finally {
-    isCreating.value = false
-  }
+  return props
+    .validateSchema(getState())
+    .then(() => props.create!(getState()))
+    .then(onResponse)
+    .catch(onError)
+    .finally(() => {
+      isCreating.value = false
+    })
 }
 
-async function updateItem() {
+function updateItem() {
   isUpdating.value = true
   setError(null)
-  try {
-    if (!props.update) {
-      throw new Error(getMissingHandlerMessage('update'))
-    }
-    await props.validateSchema(getState())
-    const response = await props.update(getState())
-    onResponse(response ?? {})
-  } catch (error) {
-    // A TypeError is a bug in the consumer's code, not an API error, so it is logged too.
-    if (error instanceof TypeError) {
-      console.error(error)
-    }
-    setError(props.errorAdapter(error, getState()))
-  } finally {
-    isUpdating.value = false
-  }
+  return props
+    .validateSchema(getState())
+    .then(() => props.update!(getState()))
+    .then(onResponse)
+    .catch(onError)
+    .finally(() => {
+      isUpdating.value = false
+    })
 }
 
-async function deleteItem() {
+function deleteItem() {
   isDeleting.value = true
   setError(null)
-  try {
-    if (!props.delete) {
-      throw new Error(getMissingHandlerMessage('delete'))
-    }
-    const response = await props.delete(getState())
-    onResponse(response ?? {})
-  } catch (error) {
-    // A TypeError is a bug in the consumer's code, not an API error, so it is logged too.
-    if (error instanceof TypeError) {
-      console.error(error)
-    }
-    setError(props.errorAdapter(error, getState()))
-  } finally {
-    isDeleting.value = false
-  }
+  return props.delete!(getState())
+    .then(onResponse)
+    .catch(onError)
+    .finally(() => {
+      isDeleting.value = false
+    })
 }
 
 function setValue(name: string, value: unknown) {
@@ -261,38 +257,7 @@ function refresh() {
 }
 
 const context: FormContext = reactive({
-  mode,
-  itemId: computed(() => {
-    return props.itemId
-  }),
-  schema: computed(() => {
-    return props.schema
-  }),
-  createSchema: computed(() => {
-    return props.createSchema
-  }),
-  updateSchema: computed(() => {
-    return props.updateSchema
-  }),
-  fields,
-  values,
-  initialValues,
-  dirtyValues,
-  touched,
-  dirty,
-  error,
-  fieldErrors,
-  meta: computed(() => {
-    return props.meta
-  }),
-  response,
-  isCreateMode,
-  isUpdateMode,
-  isLoading,
-  isReading,
-  isCreating,
-  isUpdating,
-  isDeleting,
+  ...toRefs(state),
   readItem,
   createItem,
   updateItem,

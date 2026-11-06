@@ -89,7 +89,7 @@ There is no global setup. Options are props of `Form`; a prop wins over the defa
 | ------ | --------- | ------- |
 | `resolveMode` | `({ itemId }) => 'create' \| 'update'` | `create` when `itemId` is `undefined`, `null`, `''` or `'+'` |
 | `schemaToFields` | `(schema) => Field[]` | Uses the schema when it is an array of `{ name, label, value? }` objects |
-| `validateSchema` | `(state) => Promise \| void`, throw to stop | Always passes |
+| `validateSchema` | `(state) => Promise`, reject to stop | Always passes |
 | `errorAdapter` | `(error, state) => { name, message, fieldErrors }` | Reads `name`, `message` and `errors` from the thrown value |
 
 ### `Form` props
@@ -150,7 +150,7 @@ See [CLAUDE.md](./CLAUDE.md) for the engineering rules, [LIFECYCLE.md](./LIFECYC
 - Vue: the default export and the plugin are gone. Import the components directly.
 - Handlers take one argument, the form state: `read(state)`, `update(state)`, and so on. React's `read(itemId, context)` becomes `read(state)` with `state.itemId`.
 - `resolveMode` replaces React's `isNewItemCheck` and returns `'create'` or `'update'` (lowercase). The default treats `'+'` and an empty id as create; React used `'create'`.
-- `validateSchema(state)` throws to stop the request. React's `{ success, errors }` return value is gone: throw `{ errors }` instead, and the default `errorAdapter` turns it into `fieldErrors`.
+- `validateSchema(state)` rejects to stop the request. React's `{ success, errors }` return value is gone: throw `{ errors }` instead, and the default `errorAdapter` turns it into `fieldErrors`.
 - Field errors live in `context.fieldErrors`. `FormField` gets `error` as a string.
 - React: `FormField` gives `inputProps` (`{ name, value, onChange }`) where it gave `field`; `field` is now the field definition, as in Vue.
 - React `FormDelete` and Vue `FormDelete` now both show only in update mode.

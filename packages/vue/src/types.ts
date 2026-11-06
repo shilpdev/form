@@ -1,7 +1,7 @@
 import type { FieldScope } from '@shared'
 
 /** `FieldScope` plus the Vue-only bindings. */
-export interface VueFieldScope<Schema = unknown> extends FieldScope<Schema> {
+export interface VueFieldScope extends FieldScope {
   /*
    * `any` on purpose: these objects are spread on components whose `modelValue` type the package
    * cannot know (`string` for an input, `string[]` for a multi select, ...).

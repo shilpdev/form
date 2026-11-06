@@ -1,12 +1,12 @@
-import type { FieldScope, FormContext, FormFieldPropsBase, FormPropsBase, FormScope } from '@shared'
+import type { FieldScope, FormContext, FieldPropsBase, FormPropsBase, FormScope } from '@shared'
 import type { ChangeEvent, ReactNode, Ref } from 'react'
 
 type Children<Scope> = ReactNode | ((scope: Scope) => ReactNode)
 
-export interface FormProps<Schema = unknown> extends FormPropsBase<Schema> {
-  children?: Children<FormScope<Schema>>
+export interface FormProps extends FormPropsBase {
+  children?: Children<FormScope>
   /** React 19 ref-as-prop; exposes the form context as an imperative API. */
-  ref?: Ref<FormContext<Schema>>
+  ref?: Ref<FormContext>
 }
 
 /** Spread on a native input: `<input {...inputProps} />`. */
@@ -17,15 +17,15 @@ export interface InputProps {
 }
 
 /** `FieldScope` plus the React-only `inputProps`. */
-export interface ReactFieldScope<Schema = unknown> extends FieldScope<Schema> {
+export interface ReactFieldScope extends FieldScope {
   inputProps: InputProps
 }
 
-export interface FormFieldProps extends FormFieldPropsBase {
+export interface FormFieldProps extends FieldPropsBase {
   children?: Children<ReactFieldScope>
 }
 
-export interface FormFieldErrorProps extends FormFieldPropsBase {
+export interface FormFieldErrorProps extends FieldPropsBase {
   children?: Children<FormFieldErrorScope>
 }
 

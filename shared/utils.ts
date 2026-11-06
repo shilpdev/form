@@ -12,10 +12,10 @@ import { ACTION_LABELS } from './constants'
 import { LOADING_MESSAGE } from './messages'
 
 /** `createSchema` in create mode and `updateSchema` in update mode when given, `schema` otherwise. */
-export const resolveSchema = <Schema>(
+export const resolveSchema = (
   mode: FormMode,
-  props: Pick<FormPropsBase<Schema>, 'schema' | 'createSchema' | 'updateSchema'>,
-): Schema | undefined => {
+  props: Pick<FormPropsBase, 'schema' | 'createSchema' | 'updateSchema'>,
+): unknown => {
   if (mode === 'create' && props.createSchema) {
     return props.createSchema
   }
@@ -120,7 +120,7 @@ export const getInputValue = (input: unknown): unknown => {
 }
 
 /** Shown in update mode only, except create. Hidden while the item is being read. */
-export const isActionVisible = (action: FormAction, state: FormState<unknown>): boolean => {
+export const isActionVisible = (action: FormAction, state: FormState): boolean => {
   if (action === 'create') {
     return state.isCreateMode
   }
@@ -137,7 +137,7 @@ export const isActionVisible = (action: FormAction, state: FormState<unknown>): 
 }
 
 /** Default button text: the running text while the action runs, `Loading...` while reading. */
-export const getActionLabel = (action: FormAction, state: FormState<unknown>): string => {
+export const getActionLabel = (action: FormAction, state: FormState): string => {
   const labels = ACTION_LABELS[action]
   if (state[labels.flag]) {
     return labels.running
