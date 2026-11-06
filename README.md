@@ -1,6 +1,6 @@
 # Shilp Form
 
-Headless CRUD form components for React and Vue. Point a `Form` at an item id and a schema, give it your `read`, `create`, `update`, `delete`, `archive` and `unarchive` functions, and it handles the mode, the values, dirty and touched tracking, validation, loading flags and errors. You write all the markup.
+Headless CRUD form components for React and Vue. Point a `Form` at an item id and a schema, give it your `read`, `create`, `update` and `delete` functions, and it handles the mode, the values, dirty and touched tracking, validation, loading flags and errors. You write all the markup.
 
 | Package | npm | Framework |
 | ------- | --- | --------- |
@@ -15,12 +15,11 @@ Both packages have the same API: the same component names, props, state keys, ac
 - One component for create and edit: the mode comes from the item id (`+` or no id means create)
 - Works with any schema library (Zod, Yup, Valibot, a plain array) through `schemaToFields` and `validateSchema`
 - Works with any backend: every handler is a function that returns a promise
-- Set the options once for the app, override any of them per form
+- Options are props of `Form`: write one wrapper component, reuse it everywhere
 - Tracks `values`, `initialValues`, `dirty`, `dirtyValues` and `touched`
 - Separate `createSchema` and `updateSchema` when the two modes need different fields
 - Server errors are mapped to field errors through one `errorAdapter`
-- Loading flags per action: `isReading`, `isCreating`, `isUpdating`, `isDeleting`, `isArchiving`, `isUnarchiving`
-- Archive and unarchive built in
+- Loading flags per action: `isReading`, `isCreating`, `isUpdating`, `isDeleting`
 - Written in TypeScript, with types included
 
 ## Quick start
@@ -34,7 +33,10 @@ export function UserForm({ id }: { id: string }) {
   return (
     <Form
       itemId={id}
-      schema={['name', 'email']}
+      schema={[
+        { name: 'name', label: 'Name' },
+        { name: 'email', label: 'Email' },
+      ]}
       read={(state) => api.get(`/users/${state.itemId}`)}
       create={(state) => api.post('/users', state.values)}
       update={(state) => api.patch(`/users/${state.itemId}`, state.values)}
@@ -54,7 +56,10 @@ Vue:
 <template>
   <Form
     :item-id="id"
-    :schema="['name', 'email']"
+    :schema="[
+      { name: 'name', label: 'Name' },
+      { name: 'email', label: 'Email' },
+    ]"
     :read="(state) => api.get(`/users/${state.itemId}`)"
     :create="(state) => api.post('/users', state.values)"
     :update="(state) => api.patch(`/users/${state.itemId}`, state.values)"
@@ -78,26 +83,25 @@ Every handler resolves with `{ values }` (plus anything else you want to keep in
 
 ### Options
 
-Set them once (`<FormProvider>` in React, `app.use(ShilpForm, options)` in Vue) or as props on a single `Form`. A prop wins over the app option, which wins over the default.
+There is no global setup. Options are props of `Form`; a prop wins over the default. To share them, write a wrapper component that sets them and forwards the rest (`AppForm` in the demo apps) and use it across your app.
 
 | Option | Signature | Default |
 | ------ | --------- | ------- |
 | `resolveMode` | `({ itemId }) => 'create' \| 'update'` | `create` when `itemId` is `undefined`, `null`, `''` or `'+'` |
-| `schemaToFields` | `(schema) => FieldInput[]` | Uses the schema when it is an array of names or field objects |
+| `schemaToFields` | `(schema) => Field[]` | Uses the schema when it is an array of `{ name, label, value? }` objects |
 | `validateSchema` | `(state) => Promise \| void`, throw to stop | Always passes |
 | `errorAdapter` | `(error, state) => { name, message, fieldErrors }` | Reads `name`, `message` and `errors` from the thrown value |
-| `isArchivedItemCheck` | `(response) => boolean` | `response.isArchived === true` |
 
 ### `Form` props
 
-`itemId`, `schema`, `createSchema`, `updateSchema`, `meta`, the handlers `read`, `create`, `update`, `delete`, `archive`, `unarchive` (each `(state) => Promise<{ values?, ... }>`), and any of the options above.
+`itemId`, `schema`, `createSchema`, `updateSchema`, `meta`, the handlers `read`, `create`, `update`, `delete` (each `(state) => Promise<{ values?, ... }>`), and the options above.
 
 ### Context
 
 Every slot and render prop gets `{ context }`. `useFormContext()` returns the same object.
 
-- State: `mode`, `itemId`, `fields`, `values`, `initialValues`, `dirtyValues`, `touched`, `dirty`, `error`, `fieldErrors`, `response`, `meta`, `isCreateMode`, `isUpdateMode`, `isArchived`, `isLoading` and one flag per action
-- Actions: `readItem`, `createItem`, `updateItem`, `deleteItem`, `archiveItem`, `unarchiveItem`, `setValue(name, value)`, `setFieldError(name, message)`, `setFieldErrors(errors)`, `clearErrors`, `resetForm`, `refresh`
+- State: `mode`, `itemId`, `fields`, `values`, `initialValues`, `dirtyValues`, `touched`, `dirty`, `error`, `fieldErrors`, `response`, `meta`, `isCreateMode`, `isUpdateMode`, `isLoading` and one flag per action
+- Actions: `readItem`, `createItem`, `updateItem`, `deleteItem`, `setValue(name, value)`, `setFieldError(name, message)`, `setFieldErrors(errors)`, `clearErrors`, `resetForm`, `refresh`
 
 Actions never throw: a failed request is stored in `error` and `fieldErrors`.
 
@@ -112,11 +116,9 @@ Actions never throw: a failed request is stored in `error` and `fieldErrors`.
 | `FormCreate` | create mode | |
 | `FormUpdate` | update mode | |
 | `FormDelete` | update mode, not reading | |
-| `FormArchive` | update mode, not reading, not archived | |
-| `FormUnarchive` | update mode, not reading, archived | |
 | `FormError` | there is an error | |
 
-CSS classes: `shilp-form`, `shilp-form__fields`, `shilp-form__field`, `shilp-form__field-error`, `shilp-form__create`, `shilp-form__update`, `shilp-form__delete`, `shilp-form__archive`, `shilp-form__unarchive`, `shilp-form__error`.
+CSS classes: `shilp-form`, `shilp-form__fields`, `shilp-form__field`, `shilp-form__field-error`, `shilp-form__create`, `shilp-form__update`, `shilp-form__delete`, `shilp-form__error`.
 
 ## Repository
 
@@ -144,8 +146,8 @@ See [CLAUDE.md](./CLAUDE.md) for the engineering rules, [LIFECYCLE.md](./LIFECYC
 
 ## Migrating from `@7span/react-form` and `@7span/vue-form`
 
-- Components lost their framework prefix: `ReactForm` and `VueForm` are now `Form`, `ReactFormField` and `VueFormField` are now `FormField`, and so on. `ReactFormProvider` is `FormProvider`.
-- Vue: the default export is gone. Use `app.use(ShilpForm, options)`, or import the components directly.
+- Components lost their framework prefix: `ReactForm` and `VueForm` are now `Form`, `ReactFormField` and `VueFormField` are now `FormField`, and so on. `ReactFormProvider` is gone: pass the options as props, or write a wrapper around `Form`.
+- Vue: the default export and the plugin are gone. Import the components directly.
 - Handlers take one argument, the form state: `read(state)`, `update(state)`, and so on. React's `read(itemId, context)` becomes `read(state)` with `state.itemId`.
 - `resolveMode` replaces React's `isNewItemCheck` and returns `'create'` or `'update'` (lowercase). The default treats `'+'` and an empty id as create; React used `'create'`.
 - `validateSchema(state)` throws to stop the request. React's `{ success, errors }` return value is gone: throw `{ errors }` instead, and the default `errorAdapter` turns it into `fieldErrors`.

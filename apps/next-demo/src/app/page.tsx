@@ -21,9 +21,6 @@ export default function HomePage() {
               <Link href={`/users/${user.id}`} className="flex items-center gap-3 px-4 py-3">
                 <span className="font-medium text-highlighted">{user.name}</span>
                 <span className="text-sm text-muted">{user.email}</span>
-                {user.isArchived && (
-                  <span className="ml-auto rounded bg-elevated px-2 py-0.5 text-xs">Archived</span>
-                )}
               </Link>
             </li>
           )

@@ -10,10 +10,6 @@ export const UPDATE_MESSAGE = 'Update'
 export const UPDATING_MESSAGE = 'Updating...'
 export const DELETE_MESSAGE = 'Delete'
 export const DELETING_MESSAGE = 'Deleting...'
-export const ARCHIVE_MESSAGE = 'Archive'
-export const ARCHIVING_MESSAGE = 'Archiving...'
-export const UNARCHIVE_MESSAGE = 'Unarchive'
-export const UNARCHIVING_MESSAGE = 'Unarchiving...'
 export const UNKNOWN_ERROR_NAME = 'Unknown Error'
 export const UNKNOWN_ERROR_MESSAGE = 'There was an unknown error. Please try again.'
 /** Thrown by `useFormContext` when no `Form` is above it. */
@@ -28,7 +24,7 @@ export const getFieldNotFoundMessage = (name: string): string => {
   return `Field "${name}" not found in the schema`
 }
 
-/** Thrown by an action whose handler prop was not passed, e.g. `The "archive" handler is not provided`. */
+/** Thrown by an action whose handler prop was not passed, e.g. `The "delete" handler is not provided`. */
 export const getMissingHandlerMessage = (handler: string): string => {
   return `The "${handler}" handler is not provided`
 }

@@ -9,15 +9,14 @@ export interface User {
   name: string
   email: string
   role: string
-  isArchived: boolean
 }
 
 const DELAY = 400
 
 const users: User[] = [
-  { id: 1, name: 'Aarav Shah', email: 'aarav@example.com', role: 'admin', isArchived: false },
-  { id: 2, name: 'Diya Mehta', email: 'diya@example.com', role: 'editor', isArchived: false },
-  { id: 3, name: 'Kabir Rao', email: 'kabir@example.com', role: 'viewer', isArchived: true },
+  { id: 1, name: 'Aarav Shah', email: 'aarav@example.com', role: 'admin' },
+  { id: 2, name: 'Diya Mehta', email: 'diya@example.com', role: 'editor' },
+  { id: 3, name: 'Kabir Rao', email: 'kabir@example.com', role: 'viewer' },
 ]
 
 let nextId = users.length + 1
@@ -37,8 +36,8 @@ function findUser(id: unknown): User {
 }
 
 function toResponse(user: User): ItemResponse {
-  const { name, email, role, isArchived } = user
-  return { values: { name, email, role }, isArchived, id: user.id }
+  const { name, email, role } = user
+  return { values: { name, email, role }, id: user.id }
 }
 
 /** Shows server-side field errors: the API rejects an email that another user has. */
@@ -75,7 +74,6 @@ export async function createUser(values: Values): Promise<ItemResponse> {
     name: String(values.name),
     email: String(values.email),
     role: String(values.role),
-    isArchived: false,
   }
   users.push(user)
   return toResponse(user)
@@ -94,11 +92,4 @@ export async function deleteUser(id: unknown): Promise<ItemResponse> {
   const user = findUser(id)
   users.splice(users.indexOf(user), 1)
   return {}
-}
-
-export async function setArchived(id: unknown, isArchived: boolean): Promise<ItemResponse> {
-  await wait()
-  const user = findUser(id)
-  user.isArchived = isArchived
-  return toResponse(user)
 }

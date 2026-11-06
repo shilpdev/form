@@ -1,17 +1,16 @@
 <template>
-  <div v-if="scope" :class="`${CLASS_PREFIX}__field`">
+  <div v-if="scope" class="shilp-form__field">
     <slot v-bind="scope">
       <label>
         <span>{{ scope.label }}</span>
         <input v-bind="scope.nativeModel" />
-        <span v-if="scope.error" :class="`${CLASS_PREFIX}__field-error`">{{ scope.error }}</span>
+        <span v-if="scope.error" class="shilp-form__field-error">{{ scope.error }}</span>
       </label>
     </slot>
   </div>
 </template>
 
 <script setup lang="ts">
-import { CLASS_PREFIX } from '@shared/constants'
 import { getFieldNotFoundMessage } from '@shared/messages'
 import { getInputValue } from '@shared/utils'
 import { computed } from 'vue'

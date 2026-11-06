@@ -2,87 +2,14 @@ import equal from 'fast-deep-equal'
 import type {
   Field,
   FieldErrors,
-  FieldInput,
   FormAction,
-  FormError,
   FormMode,
-  FormOptions,
   FormPropsBase,
   FormState,
-  ItemHandler,
-  ItemResponse,
   Values,
 } from './types'
-import { DEFAULT_OPTIONS } from './constants'
 import { ACTION_LABELS } from './constants'
-import { getMissingHandlerMessage, LOADING_MESSAGE } from './messages'
-
-/** `firstName` and `first_name` become `First Name`. */
-export const startCase = (text: string): string => {
-  if (!text) {
-    return text
-  }
-  return text
-    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-    .replace(/[_-]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .split(' ')
-    .map((word) => {
-      return word.charAt(0).toUpperCase() + word.slice(1)
-    })
-    .join(' ')
-}
-
-export const isEqual = (a: unknown, b: unknown): boolean => {
-  return equal(a, b)
-}
-
-/**
- * Turns field names or partial field objects into `Field` objects with a `label`, nested `attrs` too.
- * A `label` that is already set is kept.
- */
-export const attrSerializer = (attrs: FieldInput[]): Field[] => {
-  return attrs.map((item) => {
-    if (typeof item === 'string') {
-      return { name: item, label: startCase(item) }
-    }
-    const field: Field = { ...item, label: item.label ?? startCase(item.name) } as Field
-    if (item.attrs) {
-      field.attrs = attrSerializer(item.attrs)
-    }
-    return field
-  })
-}
-
-/** Same as `attrSerializer`, but skips entries that are neither a name nor an object with a `name`. */
-export const normalizeFields = (inputs: FieldInput[] | null | undefined): Field[] => {
-  if (!Array.isArray(inputs)) {
-    return []
-  }
-  const valid = inputs.filter((input) => {
-    if (typeof input === 'string') {
-      return input.length > 0
-    }
-    return input != null && typeof input === 'object' && typeof input.name === 'string'
-  })
-  return attrSerializer(valid)
-}
-
-/** App options over the defaults, then the form's own props over both. */
-export const resolveOptions = <Schema>(
-  globalOptions: Partial<FormOptions<Schema>> | null | undefined,
-  props: Partial<FormOptions<Schema>>,
-): FormOptions<Schema> => {
-  const merged = { ...DEFAULT_OPTIONS, ...(globalOptions ?? {}) } as FormOptions<Schema>
-  const keys = Object.keys(DEFAULT_OPTIONS) as (keyof FormOptions)[]
-  keys.forEach((key) => {
-    if (props[key]) {
-      ;(merged as unknown as Record<string, unknown>)[key] = props[key]
-    }
-  })
-  return merged
-}
+import { LOADING_MESSAGE } from './messages'
 
 /** `createSchema` in create mode and `updateSchema` in update mode when given, `schema` otherwise. */
 export const resolveSchema = <Schema>(
@@ -132,7 +59,7 @@ export const toggleDirty = (
   value: unknown,
   initialValues: Values,
 ): string[] => {
-  const isDirty = !isEqual(initialValues[name], value)
+  const isDirty = !equal(initialValues[name], value)
   if (isDirty && !dirty.includes(name)) {
     return [...dirty, name]
   }
@@ -170,50 +97,6 @@ export const cloneValues = (values: Values): Values => {
   return structuredClone(values)
 }
 
-interface RunItemActionInput<Schema> {
-  /** Handler prop name, used in the "not provided" error. */
-  name: string
-  handler: ItemHandler<Schema> | undefined
-  /** `create` and `update` run `validateSchema` first. */
-  isValidated: boolean
-  options: FormOptions<Schema>
-  /** Returns the latest state, so the handler sees values set in the same event. */
-  getState: () => FormState<Schema>
-  setIsRunning: (isRunning: boolean) => void
-  setError: (error: FormError | null) => void
-  onResponse: (response: ItemResponse) => void
-}
-
-/**
- * The one request flow every action uses: flag on, clear the error, validate (create and update),
- * call the handler, store the response, adapt any error, flag off. Errors are stored, never thrown,
- * so a click handler can call an action without a `catch`.
- */
-export const runItemAction = async <Schema>(input: RunItemActionInput<Schema>): Promise<void> => {
-  const { name, handler, isValidated, options, getState, setIsRunning, setError, onResponse } =
-    input
-  setIsRunning(true)
-  setError(null)
-  try {
-    if (!handler) {
-      throw new Error(getMissingHandlerMessage(name))
-    }
-    if (isValidated) {
-      await options.validateSchema(getState())
-    }
-    const response = await handler(getState())
-    onResponse(response ?? {})
-  } catch (error) {
-    // A TypeError is a bug in the consumer's code, not an API error, so it is logged too.
-    if (error instanceof TypeError) {
-      console.error(error)
-    }
-    setError(options.errorAdapter(error, getState()))
-  } finally {
-    setIsRunning(false)
-  }
-}
-
 /**
  * Input events come in two forms: a plain value from a UI library (`'some text'`, `true`) or a native
  * DOM event (`event.target.value`). A checkbox event gives `checked`.
@@ -249,12 +132,6 @@ export const isActionVisible = (action: FormAction, state: FormState<unknown>): 
   }
   if (state.isReading) {
     return false
-  }
-  if (action === 'archive') {
-    return !state.isArchived
-  }
-  if (action === 'unarchive') {
-    return state.isArchived
   }
   return true
 }

@@ -1,4 +1,3 @@
-import { CLASS_PREFIX } from '@shared/constants'
 import { getFieldNotFoundMessage } from '@shared/messages'
 import { getInputValue } from '@shared/utils'
 import { useFormContext } from '../context/form-context'
@@ -40,7 +39,7 @@ export const FormField = ({ name, children }: FormFieldProps) => {
 
   return (
     <Slot
-      className={`${CLASS_PREFIX}__field`}
+      className="shilp-form__field"
       scope={scope}
       children={children}
       fallback={() => {
@@ -48,7 +47,7 @@ export const FormField = ({ name, children }: FormFieldProps) => {
           <label>
             <span>{scope.label}</span>
             <input {...scope.inputProps} />
-            {scope.error && <span className={`${CLASS_PREFIX}__field-error`}>{scope.error}</span>}
+            {scope.error && <span className="shilp-form__field-error">{scope.error}</span>}
           </label>
         )
       }}

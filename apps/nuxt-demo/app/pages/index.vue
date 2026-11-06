@@ -12,9 +12,6 @@
           <NuxtLink :to="`/users/${user.id}`" class="flex items-center gap-3 px-4 py-3">
             <span class="font-medium">{{ user.name }}</span>
             <span class="text-sm text-muted">{{ user.email }}</span>
-            <UBadge v-if="user.isArchived" class="ml-auto" color="neutral" variant="subtle">
-              Archived
-            </UBadge>
           </NuxtLink>
         </li>
       </ul>

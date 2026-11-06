@@ -1,16 +1,16 @@
 import type { FormError, FieldErrors } from './error'
-import type { Field, FieldInput, Values } from './field'
+import type { Field, Values } from './field'
 
 /** `create` when there is no item yet, `update` when `itemId` points at an existing item. */
 export type FormMode = 'create' | 'update'
 
 /** The actions that have a button component. */
-export type FormAction = 'create' | 'update' | 'delete' | 'archive' | 'unarchive'
+export type FormAction = 'create' | 'update' | 'delete'
 
 /** Loose object for consumer data the library passes through without reading it. */
 export type Meta = Record<string, unknown>
 
-/** What every handler (`read`, `create`, `update`, `delete`, `archive`, `unarchive`) resolves with. */
+/** What every handler (`read`, `create`, `update`, `delete`) resolves with. */
 export interface ItemResponse {
   /** Loaded into the form. Missing keys fall back to the field defaults. */
   values?: Values
@@ -42,14 +42,11 @@ export interface FormState<Schema = unknown> {
   response: ItemResponse | null
   isCreateMode: boolean
   isUpdateMode: boolean
-  isArchived: boolean
   isLoading: boolean
   isReading: boolean
   isCreating: boolean
   isUpdating: boolean
   isDeleting: boolean
-  isArchiving: boolean
-  isUnarchiving: boolean
 }
 
 export interface FormActions {
@@ -57,8 +54,6 @@ export interface FormActions {
   createItem: () => Promise<void>
   updateItem: () => Promise<void>
   deleteItem: () => Promise<void>
-  archiveItem: () => Promise<void>
-  unarchiveItem: () => Promise<void>
   /** Sets one value, marks the field touched, updates `dirty` and clears that field's error. */
   setValue: (name: string, value: unknown) => void
   setFieldError: (name: string, message: string | null) => void
@@ -75,26 +70,11 @@ export type FormContext<Schema = unknown> = FormState<Schema> & FormActions
 
 export type ItemHandler<Schema = unknown> = (state: FormState<Schema>) => Promise<ItemResponse>
 
-/** Options that can be set once for the app and overridden per form. */
-/**
- * Options that can be set once for the app and overridden per form. Written as methods so options
- * typed for one schema library (for example `FormOptions<ZodObject>`) can be passed where
- * `FormOptions<unknown>` is expected.
+/*
+ * The option props are written as methods so a function typed for one schema library (for example
+ * `schemaToFields(schema: ZodObject | undefined)`) can be passed where `Schema` is `unknown`.
  */
-export interface FormOptions<Schema = unknown> {
-  /** Decides create or update from the item id. */
-  resolveMode(input: { itemId?: string | number }): FormMode
-  /** Turns your schema (Zod, Yup, an array, ...) into the list of fields. */
-  schemaToFields(schema: Schema | undefined): FieldInput[]
-  /** Runs before `create` and `update`. Throw (or reject) to stop the request. */
-  validateSchema(state: FormState<Schema>): Promise<unknown> | unknown
-  /** Turns any thrown value into a `FormError`. */
-  errorAdapter(error: unknown, state: FormState<Schema>): FormError
-  /** Reads `isArchived` from an item response. */
-  isArchivedItemCheck(response: ItemResponse): boolean
-}
-
-export interface FormPropsBase<Schema = unknown> extends Partial<FormOptions<Schema>> {
+export interface FormPropsBase<Schema = unknown> {
   itemId?: string | number
   schema?: Schema
   /** Used instead of `schema` in create mode. */
@@ -105,10 +85,16 @@ export interface FormPropsBase<Schema = unknown> extends Partial<FormOptions<Sch
   create?: ItemHandler<Schema>
   update?: ItemHandler<Schema>
   delete?: ItemHandler<Schema>
-  archive?: ItemHandler<Schema>
-  unarchive?: ItemHandler<Schema>
   /** Free-form data passed through to the handlers in `state.meta`. */
   meta?: Meta
+  /** Decides create or update from the item id. */
+  resolveMode?(input: { itemId?: string | number }): FormMode
+  /** Turns your schema (Zod, Yup, an array, ...) into the list of fields. */
+  schemaToFields?(schema: Schema | undefined): Field[]
+  /** Runs before `create` and `update`. Throw (or reject) to stop the request. */
+  validateSchema?(state: FormState<Schema>): Promise<unknown> | unknown
+  /** Turns any thrown value into a `FormError`. */
+  errorAdapter?(error: unknown, state: FormState<Schema>): FormError
 }
 
 /** Scope of `Form`, `FormFields`, `FormError` and the action buttons. */

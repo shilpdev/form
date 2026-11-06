@@ -1,4 +1,3 @@
-import { CLASS_PREFIX } from '@shared/constants'
 import { getErrorMessage } from '@shared/messages'
 import { useFormContext } from '../context/form-context'
 import type { FormPartProps } from '../types'
@@ -15,7 +14,7 @@ export const FormError = ({ children }: FormPartProps) => {
 
   return (
     <Slot
-      className={`${CLASS_PREFIX}__error`}
+      className="shilp-form__error"
       scope={{ context }}
       children={children}
       fallback={() => {

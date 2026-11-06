@@ -1,11 +1,10 @@
 <template>
-  <div v-if="error" :class="`${CLASS_PREFIX}__field-error`">
+  <div v-if="error" class="shilp-form__field-error">
     <slot :context="context" :error="error">{{ error }}</slot>
   </div>
 </template>
 
 <script setup lang="ts">
-import { CLASS_PREFIX } from '@shared/constants'
 import { computed } from 'vue'
 import { useFormContext } from '../composables/use-form-context'
 

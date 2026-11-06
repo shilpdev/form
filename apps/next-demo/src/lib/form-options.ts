@@ -1,19 +1,19 @@
 /*
- * App-wide form options for Zod schemas, passed once to `FormProvider`:
+ * Form options for Zod schemas, spread on `Form` by `AppForm`:
  * `schemaToFields` reads the field names from the object shape, and `validateSchema` throws the Zod
  * issues as `errors`, which the default `errorAdapter` turns into `fieldErrors`.
  */
-import type { FieldInput, FormOptions, FormState } from '@shilp.dev/react-form'
+import type { Field, FormProps, FormState } from '@shilp.dev/react-form'
 import type { ZodObject } from 'zod'
 
 type Schema = ZodObject
 
-const schemaToFields = (schema: Schema | undefined): FieldInput[] => {
+const schemaToFields = (schema: Schema | undefined): Field[] => {
   if (!schema) {
     return []
   }
   return Object.keys(schema.shape).map((name) => {
-    return { name, value: '' }
+    return { name, label: name.charAt(0).toUpperCase() + name.slice(1), value: '' }
   })
 }
 
@@ -32,7 +32,7 @@ const validateSchema = (state: FormState<Schema>) => {
   throw { name: 'ValidationError', message: 'Please fix the highlighted fields.', errors }
 }
 
-export const formOptions: Partial<FormOptions<Schema>> = {
+export const formOptions: Pick<FormProps<Schema>, 'schemaToFields' | 'validateSchema'> = {
   schemaToFields,
   validateSchema,
 }

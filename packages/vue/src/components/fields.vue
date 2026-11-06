@@ -1,5 +1,5 @@
 <template>
-  <div :class="`${CLASS_PREFIX}__fields`">
+  <div class="shilp-form__fields">
     <slot :context="context">
       <FormField v-for="field in context.fields" :key="field.name" :name="field.name" />
     </slot>
@@ -7,7 +7,6 @@
 </template>
 
 <script setup lang="ts">
-import { CLASS_PREFIX } from '@shared/constants'
 import { useFormContext } from '../composables/use-form-context'
 import FormField from './field.vue'
 

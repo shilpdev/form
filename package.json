@@ -2,7 +2,7 @@
   "name": "@shilpdev/form",
   "version": "0.0.1",
   "private": true,
-  "description": "Headless CRUD form components for React and Vue: read, create, update, delete, archive and unarchive an item from one schema, with your own markup.",
+  "description": "Headless CRUD form components for React and Vue: read, create, update, delete an item from one schema, with your own markup.",
   "packageManager": "pnpm@11.9.0",
   "scripts": {
     "dev": "pnpm --filter \"./apps/*\" run --parallel dev",

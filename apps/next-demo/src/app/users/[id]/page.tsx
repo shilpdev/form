@@ -1,20 +1,18 @@
 'use client'
 
 import {
-  Form,
-  FormArchive,
   FormCreate,
   FormDelete,
   FormError,
   FormField,
   FormFields,
-  FormUnarchive,
   FormUpdate,
   type FormState,
 } from '@shilp.dev/react-form'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import { createUser, deleteUser, readUser, setArchived, updateUser } from '@/lib/users-api'
+import { AppForm } from '@/components/app-form'
+import { createUser, deleteUser, readUser, updateUser } from '@/lib/users-api'
 import { ROLES, userSchema } from '@/lib/user-schema'
 
 const INPUT_CLASS = 'w-full rounded-md border border-accented bg-default px-3 py-2 text-highlighted'
@@ -43,15 +41,13 @@ export default function UserPage() {
         ← All users
       </Link>
 
-      <Form
+      <AppForm
         itemId={itemId}
         schema={userSchema}
         read={(state) => readUser(state.itemId)}
         create={create}
         update={(state) => updateUser(state.itemId, state.values)}
         delete={remove}
-        archive={(state) => setArchived(state.itemId, true)}
-        unarchive={(state) => setArchived(state.itemId, false)}
       >
         {({ context }) => {
           return (
@@ -60,9 +56,6 @@ export default function UserPage() {
                 <h1 className="text-2xl font-semibold text-highlighted">
                   {context.isCreateMode ? 'New user' : 'Edit user'}
                 </h1>
-                {context.isArchived && (
-                  <span className="rounded bg-elevated px-2 py-0.5 text-xs">Archived</span>
-                )}
                 {context.isReading && <span className="text-sm text-muted">Loading...</span>}
               </div>
 
@@ -132,8 +125,6 @@ export default function UserPage() {
               <div className="flex flex-wrap gap-2">
                 <FormCreate />
                 <FormUpdate />
-                <FormArchive />
-                <FormUnarchive />
                 <FormDelete />
               </div>
 
@@ -147,7 +138,7 @@ export default function UserPage() {
             </div>
           )
         }}
-      </Form>
+      </AppForm>
     </div>
   )
 }

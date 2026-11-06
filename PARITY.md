@@ -17,7 +17,6 @@ No differences. Every pair has the same props, show condition, default markup an
 
 These differ because the frameworks differ, not because the code drifted:
 
-- App options: `<FormProvider>` in React, `app.use(ShilpForm, options)` in Vue. Only the Vue plugin has `componentPrefix`, because only Vue registers components globally.
 - Input bindings in the `FormField` scope: `inputProps` (`{ name, value, onChange }`) in React; `model` (`modelValue` and `onUpdate:modelValue`) and `nativeModel` (`{ name, value, onInput }`) in Vue.
 - React passes `children` as nodes or a render function; Vue uses scoped slots.
 - The imperative handle is a `ref` prop with the context in React and `defineExpose(toRefs(context))` in Vue.

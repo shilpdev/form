@@ -1,6 +1,6 @@
 # React Form
 
-Headless CRUD forms for React: read, create, update, delete, archive and unarchive an item from one schema, with your own markup.
+Headless CRUD forms for React: read, create, update, delete an item from one schema, with your own markup.
 
 Use it for admin panels, dashboards and any create or edit screen backed by an API.
 
@@ -20,10 +20,10 @@ Looking for Vue? Try [`@shilp.dev/vue-form`](https://www.npmjs.com/package/@shil
 - One component for create and edit, picked from the item id
 - Works with any schema library (Zod, Yup, Valibot, a plain array)
 - Works with any backend: every handler returns a promise
-- App-wide options, overridable per form
+- Options are props of `Form`; wrap it once and reuse the wrapper
 - Values, initial values, dirty and touched tracking
 - Server errors mapped to field errors
-- Loading flags per action, archive and unarchive built in
+- Loading flags per action
 - Written in TypeScript, with types included
 
 ## Install

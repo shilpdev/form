@@ -1,29 +1,24 @@
-import type {
-  FieldErrors,
-  FormContext,
-  FormError,
-  FormState,
-  ItemHandler,
-  ItemResponse,
-  Values,
-} from '@shared'
-import { CLASS_PREFIX } from '@shared/constants'
+import type { FieldErrors, FormContext, FormError, FormState, ItemResponse, Values } from '@shared'
 import {
   addTouched,
   cloneValues,
   getDefaultValues,
   getDirtyValues,
   mergeWithDefaults,
-  normalizeFields,
-  resolveOptions,
   resolveSchema,
-  runItemAction,
   setFieldErrorIn,
   setFieldErrorsIn,
   toggleDirty,
 } from '@shared/utils'
 import { useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
-import { FormContextProvider, useFormOptions } from '../context/form-context'
+import {
+  defaultErrorAdapter,
+  defaultResolveMode,
+  defaultSchemaToFields,
+  defaultValidateSchema,
+} from '@shared/options'
+import { getMissingHandlerMessage } from '@shared/messages'
+import { FormContextProvider } from '../context/form-context'
 import type { FormProps } from '../types'
 import { Slot } from './slot'
 
@@ -36,7 +31,6 @@ interface FormData {
   fieldErrors: FieldErrors
   error: FormError | null
   response: ItemResponse | null
-  isArchived: boolean
 }
 
 const EMPTY_DATA: FormData = {
@@ -47,7 +41,6 @@ const EMPTY_DATA: FormData = {
   fieldErrors: {},
   error: null,
   response: null,
-  isArchived: false,
 }
 
 export function Form<Schema = unknown>(props: FormProps<Schema>) {
@@ -60,35 +53,23 @@ export function Form<Schema = unknown>(props: FormProps<Schema>) {
     create,
     update,
     delete: remove,
-    archive,
-    unarchive,
     meta,
-    resolveMode,
-    schemaToFields,
-    validateSchema,
-    errorAdapter,
-    isArchivedItemCheck,
+    resolveMode = defaultResolveMode,
+    schemaToFields = defaultSchemaToFields,
+    validateSchema = defaultValidateSchema,
+    errorAdapter = defaultErrorAdapter,
     ref,
     children,
   } = props
 
-  const globalOptions = useFormOptions<Schema>()
-  const options = resolveOptions(globalOptions, {
-    resolveMode,
-    schemaToFields,
-    validateSchema,
-    errorAdapter,
-    isArchivedItemCheck,
-  })
-
-  const mode = options.resolveMode({ itemId })
+  const mode = resolveMode({ itemId })
   const isCreateMode = mode === 'create'
   const isUpdateMode = mode === 'update'
   const targetSchema = resolveSchema(mode, { schema, createSchema, updateSchema })
 
   // Memoized on the schema so an inline `schemaToFields` does not rebuild the fields every render.
   const fields = useMemo(() => {
-    return normalizeFields(options.schemaToFields(targetSchema))
+    return schemaToFields(targetSchema)
   }, [targetSchema])
 
   /*
@@ -106,10 +87,7 @@ export function Form<Schema = unknown>(props: FormProps<Schema>) {
   const [isCreating, _setIsCreating] = useState(false)
   const [isUpdating, _setIsUpdating] = useState(false)
   const [isDeleting, _setIsDeleting] = useState(false)
-  const [isArchiving, _setIsArchiving] = useState(false)
-  const [isUnarchiving, _setIsUnarchiving] = useState(false)
-  const isLoading =
-    isReading || isCreating || isUpdating || isDeleting || isArchiving || isUnarchiving
+  const isLoading = isReading || isCreating || isUpdating || isDeleting
 
   const state: FormState<Schema> = {
     mode,
@@ -129,14 +107,11 @@ export function Form<Schema = unknown>(props: FormProps<Schema>) {
     response: data.response,
     isCreateMode,
     isUpdateMode,
-    isArchived: data.isArchived,
     isLoading,
     isReading,
     isCreating,
     isUpdating,
     isDeleting,
-    isArchiving,
-    isUnarchiving,
   }
   const stateRef = useRef(state)
   stateRef.current = state
@@ -154,7 +129,6 @@ export function Form<Schema = unknown>(props: FormProps<Schema>) {
       error: current.error,
       fieldErrors: current.fieldErrors,
       response: current.response,
-      isArchived: current.isArchived,
     }
   }
 
@@ -172,51 +146,93 @@ export function Form<Schema = unknown>(props: FormProps<Schema>) {
   }
 
   const onResponse = (response: ItemResponse) => {
-    let patch: Partial<FormData> = {
-      response,
-      isArchived: isUpdateMode && options.isArchivedItemCheck(response),
-    }
+    let patch: Partial<FormData> = { response }
     if (response.values) {
       patch = { ...patch, ...loadValues(response.values) }
     }
     commit(patch)
   }
 
-  const run = (
-    name: string,
-    handler: ItemHandler<Schema> | undefined,
-    isValidated: boolean,
-    setIsRunning: (isRunning: boolean) => void,
-  ) => {
-    return runItemAction({
-      name,
-      handler,
-      isValidated,
-      options,
-      getState,
-      setIsRunning,
-      setError,
-      onResponse,
-    })
+  const readItem = async () => {
+    _setIsReading(true)
+    setError(null)
+    try {
+      if (!read) {
+        throw new Error(getMissingHandlerMessage('read'))
+      }
+      const response = await read(getState())
+      onResponse(response ?? {})
+    } catch (error) {
+      // A TypeError is a bug in the consumer's code, not an API error, so it is logged too.
+      if (error instanceof TypeError) {
+        console.error(error)
+      }
+      setError(errorAdapter(error, getState()))
+    } finally {
+      _setIsReading(false)
+    }
   }
 
-  const readItem = () => {
-    return run('read', read, false, _setIsReading)
+  const createItem = async () => {
+    _setIsCreating(true)
+    setError(null)
+    try {
+      if (!create) {
+        throw new Error(getMissingHandlerMessage('create'))
+      }
+      await validateSchema(getState())
+      const response = await create(getState())
+      onResponse(response ?? {})
+    } catch (error) {
+      // A TypeError is a bug in the consumer's code, not an API error, so it is logged too.
+      if (error instanceof TypeError) {
+        console.error(error)
+      }
+      setError(errorAdapter(error, getState()))
+    } finally {
+      _setIsCreating(false)
+    }
   }
-  const createItem = () => {
-    return run('create', create, true, _setIsCreating)
+
+  const updateItem = async () => {
+    _setIsUpdating(true)
+    setError(null)
+    try {
+      if (!update) {
+        throw new Error(getMissingHandlerMessage('update'))
+      }
+      await validateSchema(getState())
+      const response = await update(getState())
+      onResponse(response ?? {})
+    } catch (error) {
+      // A TypeError is a bug in the consumer's code, not an API error, so it is logged too.
+      if (error instanceof TypeError) {
+        console.error(error)
+      }
+      setError(errorAdapter(error, getState()))
+    } finally {
+      _setIsUpdating(false)
+    }
   }
-  const updateItem = () => {
-    return run('update', update, true, _setIsUpdating)
-  }
-  const deleteItem = () => {
-    return run('delete', remove, false, _setIsDeleting)
-  }
-  const archiveItem = () => {
-    return run('archive', archive, false, _setIsArchiving)
-  }
-  const unarchiveItem = () => {
-    return run('unarchive', unarchive, false, _setIsUnarchiving)
+
+  const deleteItem = async () => {
+    _setIsDeleting(true)
+    setError(null)
+    try {
+      if (!remove) {
+        throw new Error(getMissingHandlerMessage('delete'))
+      }
+      const response = await remove(getState())
+      onResponse(response ?? {})
+    } catch (error) {
+      // A TypeError is a bug in the consumer's code, not an API error, so it is logged too.
+      if (error instanceof TypeError) {
+        console.error(error)
+      }
+      setError(errorAdapter(error, getState()))
+    } finally {
+      _setIsDeleting(false)
+    }
   }
 
   const setValue = (name: string, value: unknown) => {
@@ -277,8 +293,6 @@ export function Form<Schema = unknown>(props: FormProps<Schema>) {
     createItem,
     updateItem,
     deleteItem,
-    archiveItem,
-    unarchiveItem,
     setValue,
     setFieldError,
     setFieldErrors,
@@ -294,7 +308,7 @@ export function Form<Schema = unknown>(props: FormProps<Schema>) {
   return (
     <FormContextProvider value={context}>
       <Slot
-        className={CLASS_PREFIX}
+        className="shilp-form"
         scope={{ context }}
         children={children}
         fallback={() => {

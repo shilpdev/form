@@ -1,5 +1,4 @@
 import type { FormAction, FormContext } from '@shared'
-import { CLASS_PREFIX } from '@shared/constants'
 import { getActionLabel, isActionVisible } from '@shared/utils'
 import { useFormContext } from '../context/form-context'
 import type { FormPartProps } from '../types'
@@ -9,11 +8,9 @@ const ACTION_METHODS: Record<FormAction, keyof FormContext> = {
   create: 'createItem',
   update: 'updateItem',
   delete: 'deleteItem',
-  archive: 'archiveItem',
-  unarchive: 'unarchiveItem',
 }
 
-/** Shared by the five action buttons: they differ only in the action name. */
+/** Shared by the three action buttons: they differ only in the action name. */
 export function ActionButton({ action, children }: FormPartProps & { action: FormAction }) {
   const context = useFormContext()
 
@@ -25,7 +22,7 @@ export function ActionButton({ action, children }: FormPartProps & { action: For
 
   return (
     <Slot
-      className={`${CLASS_PREFIX}__${action}`}
+      className={`shilp-form__${action}`}
       scope={{ context }}
       children={children}
       fallback={() => {
