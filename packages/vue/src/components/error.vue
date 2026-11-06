@@ -10,7 +10,6 @@
 import { getErrorMessage } from '@shared/messages'
 import { useFormContext } from '../composables/use-form-context'
 
-/** The error of the last action, shown only when there is one. */
 defineOptions({
   name: 'FormError',
 })

@@ -9,14 +9,12 @@ export interface FormProps extends FormPropsBase {
   ref?: Ref<FormContext>
 }
 
-/** Spread on a native input: `<input {...inputProps} />`. */
 export interface InputProps {
   name: string
   value: string | number | readonly string[]
   onChange: (event: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void
 }
 
-/** `FieldScope` plus the React-only `inputProps`. */
 export interface ReactFieldScope extends FieldScope {
   inputProps: InputProps
 }
@@ -33,7 +31,6 @@ export interface FormFieldErrorScope extends FormScope {
   error: string
 }
 
-/** Props of `FormFields`, `FormError` and every action button. */
 export interface FormPartProps {
   children?: Children<FormScope>
 }

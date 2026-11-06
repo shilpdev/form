@@ -10,7 +10,6 @@
 import { useFormContext } from '../composables/use-form-context'
 import FormField from './field.vue'
 
-/** Wraps the fields. Without a slot it renders a `FormField` for every field. */
 defineOptions({
   name: 'FormFields',
 })

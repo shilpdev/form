@@ -8,7 +8,6 @@
 import { computed } from 'vue'
 import { useFormContext } from '../composables/use-form-context'
 
-/** The error message of one field, shown only when there is one. */
 defineOptions({
   name: 'FormFieldError',
 })

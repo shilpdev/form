@@ -17,7 +17,6 @@ import { computed } from 'vue'
 import { useFormContext } from '../composables/use-form-context'
 import type { VueFieldScope } from '../types'
 
-/** One field of the schema. The slot gets `VueFieldScope`. */
 defineOptions({
   name: 'FormField',
 })

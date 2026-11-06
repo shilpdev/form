@@ -4,7 +4,6 @@ import { useFormContext } from '../context/form-context'
 import type { FormFieldProps, ReactFieldScope } from '../types'
 import { Slot } from './slot'
 
-/** One field of the schema. Gets `{ context, field, name, label, value, error, updateValue, inputProps }`. */
 export const FormField = ({ name, children }: FormFieldProps) => {
   const context = useFormContext()
   const field = context.fields.find((item) => {

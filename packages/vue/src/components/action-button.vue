@@ -17,7 +17,6 @@ defineOptions({
   name: 'FormActionButton',
 })
 
-/** Shared by the three action buttons: they differ only in the action name. */
 const { action } = defineProps<{ action: FormAction }>()
 
 const context = useFormContext()

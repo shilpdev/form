@@ -1,6 +1,5 @@
 import type { FieldScope } from '@shared'
 
-/** `FieldScope` plus the Vue-only bindings. */
 export interface VueFieldScope extends FieldScope {
   /*
    * `any` on purpose: these objects are spread on components whose `modelValue` type the package

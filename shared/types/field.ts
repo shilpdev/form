@@ -16,13 +16,11 @@ export interface FieldPropsBase {
   name: string
 }
 
-/** Scope of `FormField`: the context plus what it computes for one field. */
 export interface FieldScope extends FormScope {
   field: Field
   name: string
   label: string
   value: unknown
   error: string | null
-  /** Sets this field's value (`setValue` bound to the field name). */
   updateValue: (value: unknown) => void
 }

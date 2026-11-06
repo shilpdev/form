@@ -4,13 +4,11 @@ import type { Field, Values } from './field'
 /** `create` when there is no item yet, `update` when `itemId` points at an existing item. */
 export type FormMode = 'create' | 'update'
 
-/** The actions that have a button component. */
 export type FormAction = 'create' | 'update' | 'delete'
 
 /** Loose object for consumer data the library passes through without reading it. */
 export type Meta = Record<string, unknown>
 
-/** What every handler (`read`, `create`, `update`, `delete`) resolves with. */
 export interface ItemResponse {
   /** Loaded into the form. Missing keys fall back to the field defaults. */
   values?: Values
@@ -24,11 +22,9 @@ export interface FormState {
   schema?: unknown
   createSchema?: unknown
   updateSchema?: unknown
-  /** The fields of the schema in use for the current mode, normalized. */
   fields: Field[]
   values: Values
   initialValues: Values
-  /** Only the values that differ from `initialValues`. */
   dirtyValues: Values
   /** Names of the fields the user has changed at least once. */
   touched: string[]
@@ -38,7 +34,6 @@ export interface FormState {
   /** Per-field messages: from `error.fieldErrors`, plus any set with `setFieldError`. */
   fieldErrors: FieldErrors
   meta?: Meta
-  /** The last handler response. */
   response: ItemResponse | null
   isCreateMode: boolean
   isUpdateMode: boolean
@@ -65,7 +60,6 @@ export interface FormActions {
   refresh: () => void
 }
 
-/** State plus actions: what every slot / render prop gets as `context`. */
 export type FormContext = FormState & FormActions
 
 export type ItemHandler = (state: FormState) => Promise<ItemResponse>
@@ -87,19 +81,14 @@ export interface FormPropsBase {
   create?: ItemHandler
   update?: ItemHandler
   delete?: ItemHandler
-  /** Free-form data passed through to the handlers in `state.meta`. */
   meta?: Meta
-  /** Decides create or update from the item id. */
   resolveMode?(input: { itemId?: string | number }): FormMode
-  /** Turns your schema (Zod, Yup, an array, ...) into the list of fields. */
   schemaToFields?(schema: unknown): Field[]
   /** Runs before `create` and `update`. Throw (or reject) to stop the request. */
   validateSchema?(state: FormState): Promise<unknown>
-  /** Turns any thrown value into a `FormError`. */
   errorAdapter?(error: unknown, state: FormState): FormError
 }
 
-/** Scope of `Form`, `FormFields`, `FormError` and the action buttons. */
 export interface FormScope {
   context: FormContext
 }

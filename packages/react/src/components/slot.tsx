@@ -1,13 +1,9 @@
 import type { ReactNode } from 'react'
 import type { SlotProps } from '../types'
 
-/**
- * Resolves the "render-prop function / static children / default UI" choice that every form part
- * shares, and wraps the result in its BEM container.
- *
- * - `children` is a function  -> called with `scope`
- * - `children` is nodes       -> rendered as-is
- * - `children` is absent      -> `fallback(scope)`
+/*
+ * Every form part takes a render function, plain nodes or nothing (the default UI), so that choice
+ * is made once here.
  */
 export function Slot<Scope>({ className, scope, children, fallback }: SlotProps<Scope>) {
   let content: ReactNode

@@ -11,7 +11,6 @@ import type {
 import { ACTION_LABELS } from './constants'
 import { LOADING_MESSAGE } from './messages'
 
-/** `createSchema` in create mode and `updateSchema` in update mode when given, `schema` otherwise. */
 export const resolveSchema = (
   mode: FormMode,
   props: Pick<FormPropsBase, 'schema' | 'createSchema' | 'updateSchema'>,
@@ -25,7 +24,6 @@ export const resolveSchema = (
   return props.schema
 }
 
-/** Field defaults: `field.value` or `null`. */
 export const getDefaultValues = (fields: Field[]): Values => {
   return fields.reduce<Values>((acc, field) => {
     acc[field.name] = field.value ?? null
@@ -33,7 +31,7 @@ export const getDefaultValues = (fields: Field[]): Values => {
   }, {})
 }
 
-/** Loaded values over the field defaults, so every field has a key. */
+// Every field gets a key, even when the loaded item has no value for it.
 export const mergeWithDefaults = (fields: Field[], values: Values | null | undefined): Values => {
   return { ...getDefaultValues(fields), ...(values ?? {}) }
 }
@@ -52,7 +50,6 @@ export const addTouched = (touched: string[], name: string): string[] => {
   return [...touched, name]
 }
 
-/** Adds or removes `name` from `dirty` by comparing the value with its initial value. */
 export const toggleDirty = (
   dirty: string[],
   name: string,
@@ -71,7 +68,6 @@ export const toggleDirty = (
   return dirty
 }
 
-/** Sets one message, or removes it when `message` is empty. */
 export const setFieldErrorIn = (
   errors: FieldErrors,
   name: string,
@@ -92,14 +88,14 @@ export const setFieldErrorsIn = (errors: FieldErrors, updates: FieldErrors): Fie
   }, errors)
 }
 
-/** `values` passed through `structuredClone`, so editing the form never changes `initialValues`. */
+// A copy, so editing the form never changes `initialValues`.
 export const cloneValues = (values: Values): Values => {
   return structuredClone(values)
 }
 
-/**
- * Input events come in two forms: a plain value from a UI library (`'some text'`, `true`) or a native
- * DOM event (`event.target.value`). A checkbox event gives `checked`.
+/*
+ * Input events come in two forms: a plain value from a UI library (`'some text'`, `true`) or a
+ * native DOM event (`event.target.value`). A checkbox event gives `checked`.
  */
 export const getInputValue = (input: unknown): unknown => {
   if (input == null || typeof input !== 'object' || !('target' in input)) {
@@ -119,7 +115,10 @@ export const getInputValue = (input: unknown): unknown => {
   return target.value
 }
 
-/** Shown in update mode only, except create. Hidden while the item is being read. */
+/*
+ * Create shows in create mode only. Update and delete show in update mode only, and delete is
+ * hidden while the item is being read so a half-loaded item cannot be deleted.
+ */
 export const isActionVisible = (action: FormAction, state: FormState): boolean => {
   if (action === 'create') {
     return state.isCreateMode
@@ -136,7 +135,6 @@ export const isActionVisible = (action: FormAction, state: FormState): boolean =
   return true
 }
 
-/** Default button text: the running text while the action runs, `Loading...` while reading. */
 export const getActionLabel = (action: FormAction, state: FormState): string => {
   const labels = ACTION_LABELS[action]
   if (state[labels.flag]) {

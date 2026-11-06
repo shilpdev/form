@@ -10,7 +10,6 @@ const ACTION_METHODS: Record<FormAction, keyof FormContext> = {
   delete: 'deleteItem',
 }
 
-/** Shared by the three action buttons: they differ only in the action name. */
 export function ActionButton({ action, children }: FormPartProps & { action: FormAction }) {
   const context = useFormContext()
 

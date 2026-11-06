@@ -237,7 +237,6 @@ export function Form(props: FormProps) {
     commit({ ...loadValues(cloneValues(values)), error: null, fieldErrors: {} })
   }
 
-  // 1. Setup: read the item in update mode, load the field defaults in create mode.
   const init = () => {
     if (isUpdateMode) {
       readItem()
@@ -253,7 +252,6 @@ export function Form(props: FormProps) {
   const initRef = useRef(init)
   initRef.current = init
 
-  // 2. Runs on mount and whenever `itemId` changes, like the Vue `watch`.
   useEffect(() => {
     initRef.current()
   }, [itemId])

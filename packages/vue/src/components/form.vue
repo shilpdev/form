@@ -84,7 +84,6 @@ const dirtyValues = computed(() => {
 
 /** The state keys of the context, defined once. The context spreads it, `getState` snapshots it. */
 const state: FormState = reactive({
-  //props
   itemId: computed(() => {
     return props.itemId
   }),
@@ -102,7 +101,6 @@ const state: FormState = reactive({
   }),
   fields,
 
-  // local state
   mode,
   values,
   initialValues,
@@ -241,7 +239,6 @@ function resetForm() {
   setError(null)
 }
 
-// 1. Setup: read the item in update mode, load the field defaults in create mode.
 function init() {
   if (isUpdateMode.value) {
     readItem()
@@ -272,7 +269,6 @@ const context: FormContext = reactive({
 
 provide('shilp-form-context', context)
 
-// 2. Runs on setup and whenever `itemId` changes.
 watch(() => {
   return props.itemId
 }, init)

@@ -9,7 +9,6 @@
 <script setup lang="ts">
 import ActionButton from './action-button.vue'
 
-/** Calls `createItem`. The slot gets `{ context }`. */
 defineOptions({
   name: 'FormCreate',
 })

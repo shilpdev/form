@@ -3,7 +3,6 @@ import { useFormContext } from '../context/form-context'
 import type { FormPartProps } from '../types'
 import { Slot } from './slot'
 
-/** The error of the last action, shown only when there is one. Gets `{ context }`. */
 export const FormError = ({ children }: FormPartProps) => {
   const context = useFormContext()
   const { error } = context
