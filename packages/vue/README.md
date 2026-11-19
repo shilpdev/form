@@ -19,7 +19,7 @@ Looking for React? Try [`@shilp.dev/react-form`](https://www.npmjs.com/package/@
 - Headless: you write all the markup, and nothing is styled for you
 - One component for create and edit, picked from the item id
 - Works with any schema library (Zod, Yup, Valibot, a plain array)
-- Works with any backend: every handler returns a promise
+- Works with any backend: every operation's handler returns a promise
 - Options are props of `Form`; wrap it once and reuse the wrapper
 - Values, initial values, dirty and touched tracking
 - Server errors mapped to field errors

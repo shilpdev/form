@@ -1,6 +1,6 @@
 import type { FormScope } from './form'
 
-/** What `schemaToFields` returns per field: always has a `name` and a `label`. Extra keys are kept. */
+/** What `fieldsGenerator` returns per field: always has a `name` and a `label`. Extra keys are kept. */
 export interface Field {
   name: string
   label: string

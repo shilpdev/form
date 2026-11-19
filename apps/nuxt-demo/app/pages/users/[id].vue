@@ -1,15 +1,21 @@
 <template>
   <div class="flex flex-col gap-6">
-    <UButton to="/" variant="link" color="neutral" icon="i-mdi-arrow-left" label="All users" class="self-start px-0" />
+    <UButton
+      to="/"
+      variant="link"
+      color="neutral"
+      icon="i-mdi-arrow-left"
+      label="All users"
+      class="self-start px-0"
+    />
 
     <ClientOnly>
       <AppForm
         :item-id="itemId"
-        :schema="userSchema"
-        :read="(state) => readUser(state.itemId)"
-        :create="create"
-        :update="(state) => updateUser(state.itemId, state.values)"
-        :delete="remove"
+        :read="readOperation"
+        :create="createOperation"
+        :update="updateOperation"
+        :delete="deleteOperation"
       >
         <template #default="{ context }">
           <UCard>
@@ -37,7 +43,12 @@
                   </FormField>
                   <FormField v-slot="{ label, error, model }" name="role">
                     <UFormField :label="label" :error="error ?? false">
-                      <USelect v-bind="model" :items="ROLES" placeholder="Select a role" class="w-full" />
+                      <USelect
+                        v-bind="model"
+                        :items="ROLES"
+                        placeholder="Select a role"
+                        class="w-full"
+                      />
                     </UFormField>
                   </FormField>
                 </div>
@@ -49,18 +60,39 @@
 
               <div class="flex flex-wrap gap-2">
                 <FormCreate v-slot="{ context: scope }">
-                  <UButton :loading="scope.isCreating" :disabled="scope.isLoading" label="Create" @click="scope.createItem" />
+                  <UButton
+                    :loading="scope.isCreating"
+                    :disabled="scope.isLoading"
+                    label="Create"
+                    @click="scope.createItem"
+                  />
                 </FormCreate>
                 <FormUpdate v-slot="{ context: scope }">
-                  <UButton :loading="scope.isUpdating" :disabled="scope.isLoading" label="Update" @click="scope.updateItem" />
+                  <UButton
+                    :loading="scope.isUpdating"
+                    :disabled="scope.isLoading"
+                    label="Update"
+                    @click="scope.updateItem"
+                  />
                 </FormUpdate>
                 <FormDelete v-slot="{ context: scope }">
-                  <UButton color="error" variant="outline" :loading="scope.isDeleting" :disabled="scope.isLoading" label="Delete" @click="scope.deleteItem" />
+                  <UButton
+                    color="error"
+                    variant="outline"
+                    :loading="scope.isDeleting"
+                    :disabled="scope.isLoading"
+                    label="Delete"
+                    @click="scope.deleteItem"
+                  />
                 </FormDelete>
               </div>
 
               <pre class="overflow-auto rounded-md bg-elevated p-3 text-xs">{{
-                JSON.stringify({ dirtyValues: context.dirtyValues, touched: context.touched }, null, 2)
+                JSON.stringify(
+                  { dirtyValues: context.dirtyValues, touched: context.touched },
+                  null,
+                  2,
+                )
               }}</pre>
             </div>
           </UCard>
@@ -78,31 +110,65 @@ import {
   FormField,
   FormFields,
   FormUpdate,
-  type FormState,
+  type OperationConfig,
+  type OperationError,
+  type OperationResponse,
 } from '@shilp.dev/vue-form'
-import {
-  createUser,
-  deleteUser,
-  readUser,
-  updateUser,
-} from '~/utils/users-api'
+import { createUser, deleteUser, readUser, updateUser } from '~/utils/users-api'
 import { ROLES, userSchema } from '~/utils/user-schema'
 
 const route = useRoute()
-// `+` in the URL is the "new user" id, which the default `resolveMode` treats as create mode.
+// `+` in the URL is the "new user" id, which `modeDetector` in `AppForm` treats as create mode.
 const itemId = computed(() => {
   return String(route.params.id)
 })
 
-async function create(state: FormState) {
-  const response = await createUser(state.values)
-  await navigateTo(`/users/${response.id}`)
-  return response
+function onError(error: unknown): OperationError {
+  const { name, message, errors } = error as {
+    name?: string
+    message?: string
+    errors?: Record<string, string>
+  }
+  return {
+    name: name ?? 'Error',
+    message: message ?? 'Something went wrong. Please try again.',
+    fieldErrors: errors ?? {},
+  }
 }
 
-async function remove(state: FormState) {
-  const response = await deleteUser(state.itemId)
-  await navigateTo('/')
-  return response
+const readOperation: OperationConfig = {
+  onError,
+  handler: async (state): Promise<OperationResponse> => {
+    const { id, name, email, role } = await readUser(state.itemId)
+    return { values: { name, email, role }, id }
+  },
+}
+
+const createOperation: OperationConfig = {
+  schema: userSchema,
+  onError,
+  handler: async (state): Promise<OperationResponse> => {
+    const { id, name, email, role } = await createUser(state.values)
+    await navigateTo(`/users/${id}`)
+    return { values: { name, email, role }, id }
+  },
+}
+
+const updateOperation: OperationConfig = {
+  schema: userSchema,
+  onError,
+  handler: async (state): Promise<OperationResponse> => {
+    const { id, name, email, role } = await updateUser(state.itemId, state.values)
+    return { values: { name, email, role }, id }
+  },
+}
+
+const deleteOperation: OperationConfig = {
+  onError,
+  handler: async (state): Promise<OperationResponse> => {
+    await deleteUser(state.itemId)
+    await navigateTo('/')
+    return {}
+  },
 }
 </script>

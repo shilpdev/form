@@ -9,15 +9,12 @@ import type {
 
 export const resolveSchema = (
   mode: FormMode,
-  props: Pick<FormPropsBase, 'schema' | 'createSchema' | 'updateSchema'>,
+  props: Pick<FormPropsBase, 'create' | 'update'>,
 ): unknown => {
-  if (mode === 'create' && props.createSchema) {
-    return props.createSchema
+  if (mode === 'create') {
+    return props.create?.schema
   }
-  if (mode === 'update' && props.updateSchema) {
-    return props.updateSchema
-  }
-  return props.schema
+  return props.update?.schema
 }
 
 export const getDefaultValues = (fields: Field[]): Values => {

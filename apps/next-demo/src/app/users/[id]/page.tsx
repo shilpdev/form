@@ -7,7 +7,9 @@ import {
   FormField,
   FormFields,
   FormUpdate,
-  type FormState,
+  type OperationConfig,
+  type OperationError,
+  type OperationResponse,
 } from '@shilp.dev/react-form'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
@@ -17,22 +19,60 @@ import { ROLES, userSchema } from '@/lib/user-schema'
 
 const INPUT_CLASS = 'w-full rounded-md border border-accented bg-default px-3 py-2 text-highlighted'
 
+
+function onError(error: unknown): OperationError {
+  const { name, message, errors } = error as {
+    name?: string
+    message?: string
+    errors?: Record<string, string>
+  }
+  return {
+    name: name ?? 'Error',
+    message: message ?? 'Something went wrong. Please try again.',
+    fieldErrors: errors ?? {},
+  }
+}
+
 export default function UserPage() {
   const params = useParams<{ id: string }>()
   const router = useRouter()
-  // `+` in the URL is the "new user" id, which the default `resolveMode` treats as create mode.
+  // `+` in the URL is the "new user" id, which `modeDetector` in `AppForm` treats as create mode.
   const itemId = decodeURIComponent(params.id)
 
-  const create = async (state: FormState) => {
-    const response = await createUser(state.values)
-    router.push(`/users/${response.id}`)
-    return response
+  const readOperation: OperationConfig = {
+    onError,
+    handler: async (state): Promise<OperationResponse> => {
+      const { id, name, email, role } = await readUser(state.itemId)
+      return { values: { name, email, role }, id }
+    },
   }
 
-  const remove = async (state: FormState) => {
-    const response = await deleteUser(state.itemId)
-    router.push('/')
-    return response
+  const createOperation: OperationConfig = {
+    schema: userSchema,
+    onError,
+    handler: async (state): Promise<OperationResponse> => {
+      const { id, name, email, role } = await createUser(state.values)
+      router.push(`/users/${id}`)
+      return { values: { name, email, role }, id }
+    },
+  }
+
+  const updateOperation: OperationConfig = {
+    schema: userSchema,
+    onError,
+    handler: async (state): Promise<OperationResponse> => {
+      const { id, name, email, role } = await updateUser(state.itemId, state.values)
+      return { values: { name, email, role }, id }
+    },
+  }
+
+  const deleteOperation: OperationConfig = {
+    onError,
+    handler: async (state): Promise<OperationResponse> => {
+      await deleteUser(state.itemId)
+      router.push('/')
+      return {}
+    },
   }
 
   return (
@@ -43,11 +83,10 @@ export default function UserPage() {
 
       <AppForm
         itemId={itemId}
-        schema={userSchema}
-        read={(state) => readUser(state.itemId)}
-        create={create}
-        update={(state) => updateUser(state.itemId, state.values)}
-        delete={remove}
+        read={readOperation}
+        create={createOperation}
+        update={updateOperation}
+        delete={deleteOperation}
       >
         {({ context }) => {
           return (

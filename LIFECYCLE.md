@@ -8,9 +8,9 @@ How `Form` behaves from setup to a response, in both `@shilp.dev/react-form` and
 sequenceDiagram
   participant App as Consumer
   participant Form
-  participant V as validateSchema
+  participant V as schemaValidator
   participant H as handler
-  participant EA as errorAdapter
+  participant OE as operation.onError
 
   Note over Form: 1. Setup
   alt update mode
@@ -20,13 +20,14 @@ sequenceDiagram
   end
   Note over Form: 2. Action (create, update, delete)
   App->>Form: createItem()
-  Form->>V: validateSchema(state) (create and update only)
+  Form->>V: schemaValidator(state) (create and update only)
   Form->>H: create(state)
   alt 3. Response
     H-->>Form: { values, ... }
   else 4. Error
     H--xForm: throws
-    Form->>EA: errorAdapter(error, state)
+    Form->>OE: onError(error, state)
+    OE-->>Form: OperationError (sets error)
   end
 ```
 
@@ -34,9 +35,9 @@ sequenceDiagram
 
 ### 1. Setup
 
-- Each option is the prop on the `Form`, or its default from `shared/options.ts` when the prop is not passed.
-- `resolveMode({ itemId })` sets the mode. The default returns `create` for `undefined`, `null`, `''` and `'+'`, and `update` for anything else.
-- The schema in use is `createSchema` in create mode and `updateSchema` in update mode when given, `schema` otherwise. `schemaToFields` turns it into fields (`{ name, label, value? }`).
+- The options (`modeDetector`, `fieldsGenerator`, `schemaValidator`) are required props of `Form`; there are no defaults.
+- `modeDetector({ itemId })` sets the mode. It is a required prop and has no default.
+- The schema in use is `create.schema` in create mode and `update.schema` in update mode. `fieldsGenerator` turns it into fields (`{ name, label, value? }`).
 - Update mode: `readItem()` runs (step 2 without validation). Create mode: `values` are the field defaults (`field.value`, or `null`), and `error` and `response` are cleared.
 - Setup runs again whenever `itemId` changes, and on `refresh()`. In React it runs in an effect, so React StrictMode reads twice in development.
 
@@ -46,11 +47,11 @@ Every action (`readItem`, `createItem`, `updateItem`, `deleteItem`):
 
 1. Sets its flag (`isCreating`, ...) and so `isLoading`.
 2. Clears `error` and `fieldErrors`.
-3. `createItem` and `updateItem` only: calls `validateSchema(state)`. A rejection goes to step 5 and the handler is not called.
-4. Calls the handler with the latest state, then `onResponse` (step 3 below). In React the state includes values set in the same event.
-5. A rejection goes to `onError`: a `TypeError` is logged, and `errorAdapter(error, state)` sets `error` and `fieldErrors`. The flag is cleared at the end either way.
+3. `createItem` and `updateItem` only: calls `schemaValidator(state)`, where `state.schema` and `state.meta` come from the operation being run. A rejection goes to step 5 and the handler is not called.
+4. Calls the handler with the latest state, then `onResponse` (step 3 below), which also calls the operation's `onSuccess(response, state)`. In React the state includes values set in the same event.
+5. A rejection goes to `onError`: a `TypeError` is logged, and the operation's `onError(error, state)` runs. If it returns an `OperationError`, that sets `error` and `fieldErrors`; if the operation has no `onError`, or it returns nothing, they stay empty. The flag is cleared at the end either way.
 
-The whole flow is one chain: `handler(state).then(onResponse).catch(onError).finally(...)`. The handler props you use must be passed: calling an action whose handler is missing throws a `TypeError` straight away.
+The whole flow is one chain: `operation.handler(state).then(onResponse).catch(onError).finally(...)`. The operations you use must be passed: calling an action whose operation is missing throws a `TypeError` straight away.
 
 ### 3. Response
 
@@ -60,7 +61,7 @@ The whole flow is one chain: `handler(state).then(onResponse).catch(onError).fin
 ### 4. Error
 
 - A `TypeError` is also logged with `console.error`, since it usually means a bug in a handler.
-- `error` is `errorAdapter(thrown, state)`, and `fieldErrors` is a copy of `error.fieldErrors`.
+- `error` is what the operation's `onError(thrown, state)` returned, and `fieldErrors` is a copy of `error.fieldErrors`.
 - Nothing is thrown to the caller.
 
 The flag is turned off after step 3 or 4.

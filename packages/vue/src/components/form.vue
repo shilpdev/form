@@ -8,18 +8,13 @@
 import type {
   FieldErrors,
   FormContext,
-  FormError,
   FormPropsBase,
   FormState,
-  ItemResponse,
+  OperationResponse,
+  OperationConfig,
+  OperationError,
   Values,
 } from '@shared'
-import {
-  defaultErrorAdapter,
-  defaultResolveMode,
-  defaultSchemaToFields,
-  defaultValidateSchema,
-} from '@shared/options'
 import {
   addTouched,
   cloneValues,
@@ -38,20 +33,15 @@ defineOptions({
   name: 'Form',
 })
 
-const props = withDefaults(defineProps<FormPropsBase>(), {
-  resolveMode: defaultResolveMode,
-  schemaToFields: defaultSchemaToFields,
-  validateSchema: defaultValidateSchema,
-  errorAdapter: defaultErrorAdapter,
-})
+const props = defineProps<FormPropsBase>()
 
 const values = ref<Values>({})
 const initialValues = ref<Values>({})
 const touched = ref<string[]>([])
 const dirty = ref<string[]>([])
 const fieldErrors = ref<FieldErrors>({})
-const error = ref<FormError | null>(null)
-const response = ref<ItemResponse | null>(null)
+const error = ref<OperationError | null>(null)
+const response = ref<OperationResponse | null>(null)
 const isReading = ref(false)
 const isCreating = ref(false)
 const isUpdating = ref(false)
@@ -62,7 +52,7 @@ const isLoading = computed(() => {
 })
 
 const mode = computed(() => {
-  return props.resolveMode({ itemId: props.itemId })
+  return props.modeDetector({ itemId: props.itemId })
 })
 
 const isCreateMode = computed(() => {
@@ -74,8 +64,7 @@ const isUpdateMode = computed(() => {
 })
 
 const fields = computed(() => {
-  const targetSchema = resolveSchema(mode.value, props)
-  return props.schemaToFields(targetSchema)
+  return props.fieldsGenerator({ schema: resolveSchema(mode.value, props) })
 })
 
 const dirtyValues = computed(() => {
@@ -88,16 +77,7 @@ const state: FormState = reactive({
     return props.itemId
   }),
   schema: computed(() => {
-    return props.schema
-  }),
-  createSchema: computed(() => {
-    return props.createSchema
-  }),
-  updateSchema: computed(() => {
-    return props.updateSchema
-  }),
-  meta: computed(() => {
-    return props.meta
+    return resolveSchema(mode.value, props)
   }),
   fields,
 
@@ -119,10 +99,15 @@ const state: FormState = reactive({
   isDeleting,
 })
 
-/** A plain snapshot (no methods, no proxies) for the handlers, `validateSchema` and `errorAdapter`. */
-const getState = (): FormState => {
+/*
+ * A plain snapshot (no methods, no proxies) for the handlers and `schemaValidator`,
+ * with the schema and meta of the operation being run.
+ */
+const getState = (operation: OperationConfig): FormState => {
   return {
     ...state,
+    schema: operation.schema,
+    meta: operation.meta,
     values: toRaw(state.values),
     initialValues: toRaw(state.initialValues),
     touched: toRaw(state.touched),
@@ -139,7 +124,7 @@ function loadValues(newValues: Values | undefined) {
   dirty.value = []
 }
 
-function setError(newError: FormError | null) {
+function setError(newError: OperationError | null) {
   error.value = newError
   if (newError) {
     fieldErrors.value = { ...newError.fieldErrors }
@@ -148,27 +133,36 @@ function setError(newError: FormError | null) {
   }
 }
 
-function onError(newError: unknown) {
-  // A TypeError is a bug in the consumer's code, not an API error, so it is logged too.
-  if (newError instanceof TypeError) {
-    console.error(newError)
+function onError(operation: OperationConfig) {
+  return (newError: unknown) => {
+    // A TypeError is a bug in the consumer's code, not an API error, so it is logged too.
+    if (newError instanceof TypeError) {
+      console.error(newError)
+    }
+    const operationError = operation.onError?.(newError, getState(operation))
+    if (operationError) {
+      setError(operationError)
+    }
   }
-  setError(props.errorAdapter(newError, getState()))
 }
 
-function onResponse(newResponse: ItemResponse) {
-  response.value = newResponse
-  if (newResponse.values) {
-    loadValues(newResponse.values)
+function onResponse(operation: OperationConfig) {
+  return (newResponse: OperationResponse) => {
+    response.value = newResponse
+    if (newResponse.values) {
+      loadValues(newResponse.values)
+    }
+    operation.onSuccess?.(newResponse, getState(operation))
   }
 }
 
 function readItem() {
   isReading.value = true
   setError(null)
-  return props.read!(getState())
-    .then(onResponse)
-    .catch(onError)
+  return props
+    .read!.handler(getState(props.read!))
+    .then(onResponse(props.read!))
+    .catch(onError(props.read!))
     .finally(() => {
       isReading.value = false
     })
@@ -178,10 +172,10 @@ function createItem() {
   isCreating.value = true
   setError(null)
   return props
-    .validateSchema(getState())
-    .then(() => props.create!(getState()))
-    .then(onResponse)
-    .catch(onError)
+    .schemaValidator(getState(props.create!))
+    .then(() => props.create!.handler(getState(props.create!)))
+    .then(onResponse(props.create!))
+    .catch(onError(props.create!))
     .finally(() => {
       isCreating.value = false
     })
@@ -191,10 +185,10 @@ function updateItem() {
   isUpdating.value = true
   setError(null)
   return props
-    .validateSchema(getState())
-    .then(() => props.update!(getState()))
-    .then(onResponse)
-    .catch(onError)
+    .schemaValidator(getState(props.update!))
+    .then(() => props.update!.handler(getState(props.update!)))
+    .then(onResponse(props.update!))
+    .catch(onError(props.update!))
     .finally(() => {
       isUpdating.value = false
     })
@@ -203,9 +197,10 @@ function updateItem() {
 function deleteItem() {
   isDeleting.value = true
   setError(null)
-  return props.delete!(getState())
-    .then(onResponse)
-    .catch(onError)
+  return props
+    .delete!.handler(getState(props.delete!))
+    .then(onResponse(props.delete!))
+    .catch(onError(props.delete!))
     .finally(() => {
       isDeleting.value = false
     })

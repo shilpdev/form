@@ -1,4 +1,12 @@
-import type { FieldErrors, FormContext, FormError, FormState, ItemResponse, Values } from '@shared'
+import type {
+  FieldErrors,
+  FormContext,
+  FormState,
+  OperationResponse,
+  OperationConfig,
+  OperationError,
+  Values,
+} from '@shared'
 import {
   addTouched,
   cloneValues,
@@ -11,12 +19,6 @@ import {
   toggleDirty,
 } from '@shared/utils'
 import { useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
-import {
-  defaultErrorAdapter,
-  defaultResolveMode,
-  defaultSchemaToFields,
-  defaultValidateSchema,
-} from '@shared/options'
 import { FormContextProvider } from '../context/form-context'
 import type { FormProps } from '../types'
 import { Slot } from './slot'
@@ -28,8 +30,8 @@ interface FormData {
   touched: string[]
   dirty: string[]
   fieldErrors: FieldErrors
-  error: FormError | null
-  response: ItemResponse | null
+  error: OperationError | null
+  response: OperationResponse | null
 }
 
 const EMPTY_DATA: FormData = {
@@ -45,30 +47,25 @@ const EMPTY_DATA: FormData = {
 export function Form(props: FormProps) {
   const {
     itemId,
-    schema,
-    createSchema,
-    updateSchema,
-    read,
     create,
+    read,
     update,
     delete: remove,
-    meta,
-    resolveMode = defaultResolveMode,
-    schemaToFields = defaultSchemaToFields,
-    validateSchema = defaultValidateSchema,
-    errorAdapter = defaultErrorAdapter,
+    modeDetector,
+    fieldsGenerator,
+    schemaValidator,
     ref,
     children,
   } = props
 
-  const mode = resolveMode({ itemId })
+  const mode = modeDetector({ itemId })
   const isCreateMode = mode === 'create'
   const isUpdateMode = mode === 'update'
-  const targetSchema = resolveSchema(mode, { schema, createSchema, updateSchema })
+  const targetSchema = resolveSchema(mode, { create, update })
 
-  // Memoized on the schema so an inline `schemaToFields` does not rebuild the fields every render.
+  // Memoized on the schema so an inline `fieldsGenerator` does not rebuild the fields every render.
   const fields = useMemo(() => {
-    return schemaToFields(targetSchema)
+    return fieldsGenerator({ schema: targetSchema })
   }, [targetSchema])
 
   /*
@@ -91,9 +88,7 @@ export function Form(props: FormProps) {
   const state: FormState = {
     mode,
     itemId,
-    schema,
-    createSchema,
-    updateSchema,
+    schema: targetSchema,
     fields,
     values: data.values,
     initialValues: data.initialValues,
@@ -102,7 +97,6 @@ export function Form(props: FormProps) {
     dirty: data.dirty,
     error: data.error,
     fieldErrors: data.fieldErrors,
-    meta,
     response: data.response,
     isCreateMode,
     isUpdateMode,
@@ -115,11 +109,13 @@ export function Form(props: FormProps) {
   const stateRef = useRef(state)
   stateRef.current = state
 
-  /** The rendered state with the latest form data, for handlers that run after an `await`. */
-  const getState = (): FormState => {
+  /** The rendered state with the latest form data and the schema and meta of the operation being run. */
+  const getState = (operation: OperationConfig): FormState => {
     const current = dataRef.current
     return {
       ...stateRef.current,
+      schema: operation.schema,
+      meta: operation.meta,
       values: current.values,
       initialValues: current.initialValues,
       dirtyValues: getDirtyValues(current.dirty, current.values),
@@ -136,7 +132,7 @@ export function Form(props: FormProps) {
     return { values: merged, initialValues: cloneValues(merged), touched: [], dirty: [] }
   }
 
-  const setError = (error: FormError | null) => {
+  const setError = (error: OperationError | null) => {
     if (error) {
       commit({ error, fieldErrors: { ...error.fieldErrors } })
     } else {
@@ -144,28 +140,37 @@ export function Form(props: FormProps) {
     }
   }
 
-  const onError = (error: unknown) => {
-    // A TypeError is a bug in the consumer's code, not an API error, so it is logged too.
-    if (error instanceof TypeError) {
-      console.error(error)
+  const onError = (operation: OperationConfig) => {
+    return (error: unknown) => {
+      // A TypeError is a bug in the consumer's code, not an API error, so it is logged too.
+      if (error instanceof TypeError) {
+        console.error(error)
+      }
+      const operationError = operation.onError?.(error, getState(operation))
+      if (operationError) {
+        setError(operationError)
+      }
     }
-    setError(errorAdapter(error, getState()))
   }
 
-  const onResponse = (response: ItemResponse) => {
-    let patch: Partial<FormData> = { response }
-    if (response.values) {
-      patch = { ...patch, ...loadValues(response.values) }
+  const onResponse = (operation: OperationConfig) => {
+    return (response: OperationResponse) => {
+      let patch: Partial<FormData> = { response }
+      if (response.values) {
+        patch = { ...patch, ...loadValues(response.values) }
+      }
+      commit(patch)
+      operation.onSuccess?.(response, getState(operation))
     }
-    commit(patch)
   }
 
   const readItem = () => {
     _setIsReading(true)
     setError(null)
-    return read!(getState())
-      .then(onResponse)
-      .catch(onError)
+    return read!
+      .handler(getState(read!))
+      .then(onResponse(read!))
+      .catch(onError(read!))
       .finally(() => {
         _setIsReading(false)
       })
@@ -174,10 +179,10 @@ export function Form(props: FormProps) {
   const createItem = () => {
     _setIsCreating(true)
     setError(null)
-    return validateSchema(getState())
-      .then(() => create!(getState()))
-      .then(onResponse)
-      .catch(onError)
+    return schemaValidator(getState(create!))
+      .then(() => create!.handler(getState(create!)))
+      .then(onResponse(create!))
+      .catch(onError(create!))
       .finally(() => {
         _setIsCreating(false)
       })
@@ -186,10 +191,10 @@ export function Form(props: FormProps) {
   const updateItem = () => {
     _setIsUpdating(true)
     setError(null)
-    return validateSchema(getState())
-      .then(() => update!(getState()))
-      .then(onResponse)
-      .catch(onError)
+    return schemaValidator(getState(update!))
+      .then(() => update!.handler(getState(update!)))
+      .then(onResponse(update!))
+      .catch(onError(update!))
       .finally(() => {
         _setIsUpdating(false)
       })
@@ -198,9 +203,10 @@ export function Form(props: FormProps) {
   const deleteItem = () => {
     _setIsDeleting(true)
     setError(null)
-    return remove!(getState())
-      .then(onResponse)
-      .catch(onError)
+    return remove!
+      .handler(getState(remove!))
+      .then(onResponse(remove!))
+      .catch(onError(remove!))
       .finally(() => {
         _setIsDeleting(false)
       })

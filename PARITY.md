@@ -7,7 +7,7 @@ Each row is a place where `packages/react` behaves or is shaped differently from
 | Priority | Difference | React | Vue |
 | -------- | ---------- | ----- | --- |
 | Low | React StrictMode | Setup runs in an effect, so in development `read` is called twice on mount | Runs once |
-| Low | Field list identity | Fields are memoized on the schema object, so an inline `schemaToFields` prop that changes is picked up only when the schema changes | Recomputed whenever the schema or the options change |
+| Low | Field list identity | Fields are memoized on the schema object, so an inline `fieldsGenerator` prop that changes is picked up only when the schema changes | Recomputed whenever the schema or the options change |
 
 ## Slot components
 

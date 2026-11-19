@@ -1,6 +1,6 @@
 # Shilp Form
 
-Headless CRUD form components for React and Vue. Point a `Form` at an item id and a schema, give it your `read`, `create`, `update` and `delete` functions, and it handles the mode, the values, dirty and touched tracking, validation, loading flags and errors. You write all the markup.
+Headless CRUD form components for React and Vue. Point a `Form` at an item id and a schema, give each of `read`, `create`, `update` and `delete` an operation (a handler, and optionally a schema and callbacks), and it handles the mode, the values, dirty and touched tracking, validation, loading flags and errors. You write all the markup.
 
 | Package | npm | Framework |
 | ------- | --- | --------- |
@@ -13,16 +13,41 @@ Both packages have the same API: the same component names, props, state keys, ac
 
 - Headless: render props in React, scoped slots in Vue, and nothing is styled for you
 - One component for create and edit: the mode comes from the item id (`+` or no id means create)
-- Works with any schema library (Zod, Yup, Valibot, a plain array) through `schemaToFields` and `validateSchema`
-- Works with any backend: every handler is a function that returns a promise
+- Works with any schema library (Zod, Yup, Valibot, a plain array) through `fieldsGenerator` and `schemaValidator`
+- Works with any backend: every operation's `handler` returns a promise
+- `onSuccess` and `onError` callbacks per operation
 - Options are props of `Form`: write one wrapper component, reuse it everywhere
 - Tracks `values`, `initialValues`, `dirty`, `dirtyValues` and `touched`
-- Separate `createSchema` and `updateSchema` when the two modes need different fields
-- Server errors are mapped to field errors through one `errorAdapter`
+- One `schema` per operation, so create and update can have different fields
+- Server errors are mapped to field errors by each operation's `onError`
 - Loading flags per action: `isReading`, `isCreating`, `isUpdating`, `isDeleting`
 - Written in TypeScript, with types included
 
 ## Quick start
+
+`modeDetector`, `fieldsGenerator` and `schemaValidator` are required. These are used in both examples:
+
+```ts
+const fields = [
+  { name: 'name', label: 'Name' },
+  { name: 'email', label: 'Email' },
+]
+
+const modeDetector = ({ itemId }: { itemId?: string | number }) => {
+  if (itemId === undefined || itemId === '+') {
+    return 'create'
+  }
+  return 'update'
+}
+
+// Here the schema is already the list of fields. With Zod, build the list from the schema instead.
+const fieldsGenerator = ({ schema }: { schema: unknown }) => {
+  return schema as typeof fields
+}
+
+// Nothing to validate here. With Zod, parse `state.values` and throw when it fails.
+const schemaValidator = async () => {}
+```
 
 React:
 
@@ -33,13 +58,18 @@ export function UserForm({ id }: { id: string }) {
   return (
     <Form
       itemId={id}
-      schema={[
-        { name: 'name', label: 'Name' },
-        { name: 'email', label: 'Email' },
-      ]}
-      read={(state) => api.get(`/users/${state.itemId}`)}
-      create={(state) => api.post('/users', state.values)}
-      update={(state) => api.patch(`/users/${state.itemId}`, state.values)}
+      modeDetector={modeDetector}
+      fieldsGenerator={fieldsGenerator}
+      schemaValidator={schemaValidator}
+      read={{ handler: (state) => api.get(`/users/${state.itemId}`) }}
+      create={{
+        schema: fields,
+        handler: (state) => api.post('/users', state.values),
+      }}
+      update={{
+        schema: fields,
+        handler: (state) => api.patch(`/users/${state.itemId}`, state.values),
+      }}
     >
       <FormFields />
       <FormError />
@@ -56,13 +86,12 @@ Vue:
 <template>
   <Form
     :item-id="id"
-    :schema="[
-      { name: 'name', label: 'Name' },
-      { name: 'email', label: 'Email' },
-    ]"
-    :read="(state) => api.get(`/users/${state.itemId}`)"
-    :create="(state) => api.post('/users', state.values)"
-    :update="(state) => api.patch(`/users/${state.itemId}`, state.values)"
+    :mode-detector="modeDetector"
+    :fields-generator="fieldsGenerator"
+    :schema-validator="schemaValidator"
+    :read="{ handler: (state) => api.get(`/users/${state.itemId}`) }"
+    :create="{ schema: fields, handler: (state) => api.post('/users', state.values) }"
+    :update="{ schema: fields, handler: (state) => api.patch(`/users/${state.itemId}`, state.values) }"
   >
     <FormFields />
     <FormError />
@@ -83,24 +112,35 @@ Every handler resolves with `{ values }` (plus anything else you want to keep in
 
 ### Options
 
-There is no global setup. Options are props of `Form`; a prop wins over the default. To share them, write a wrapper component that sets them and forwards the rest (`AppForm` in the demo apps) and use it across your app.
+There is no global setup. The options are required props of `Form`. To share them, write a wrapper component that sets them and passes down only the props the page needs (`AppForm` in the demo apps) and use it across your app.
 
-| Option | Signature | Default |
-| ------ | --------- | ------- |
-| `resolveMode` | `({ itemId }) => 'create' \| 'update'` | `create` when `itemId` is `undefined`, `null`, `''` or `'+'` |
-| `schemaToFields` | `(schema) => Field[]` | Uses the schema when it is an array of `{ name, label, value? }` objects |
-| `validateSchema` | `(state) => Promise`, reject to stop | Always passes |
-| `errorAdapter` | `(error, state) => { name, message, fieldErrors }` | Reads `name`, `message` and `errors` from the thrown value |
+| Option | Signature | What it does |
+| ------ | --------- | ------------ |
+| `modeDetector` | `({ itemId }) => 'create' \| 'update'` | Decides which item ids mean create (for example `undefined` or `'+'`) |
+| `fieldsGenerator` | `({ schema }) => Field[]` | Turns the schema of the current mode into `{ name, label, value? }` fields |
+| `schemaValidator` | `(state) => Promise`, reject to stop | Runs before `create` and `update` |
 
 ### `Form` props
 
-`itemId`, `schema`, `createSchema`, `updateSchema`, `meta`, the handlers `read`, `create`, `update`, `delete` (each `(state) => Promise<{ values?, ... }>`), and the options above.
+`itemId`, the operations `read`, `create`, `update` and `delete`, and the options above. Each operation is an object:
+
+| Key | Type | |
+| --- | ---- | --- |
+| `handler` | `(state) => Promise<OperationResponse>` | Required. Does the request |
+| `schema` | anything your `fieldsGenerator` and `schemaValidator` accept | Create mode uses `create.schema` for the fields, update mode uses `update.schema` |
+| `onSuccess` | `(response, state) => void` | After the response is stored |
+| `onError` | `(error, state) => OperationError \| undefined` | Gets whatever was thrown. Return `{ name, message, fieldErrors }` to set `error` and `fieldErrors`; return nothing to leave them empty |
+| `meta` | object | Passed to this operation's handler, `schemaValidator` and `onError` as `state.meta` |
+
+`OperationResponse` is `{ values?: Record<string, unknown>, ...anything else }`. When `values` is present it is loaded into the form; the whole object is stored as `response` and passed to `onSuccess`.
+
+`fields` is the array that `fieldsGenerator` returns for your schema.
 
 ### Context
 
 Every slot and render prop gets `{ context }`. `useFormContext()` returns the same object.
 
-- State: `mode`, `itemId`, `fields`, `values`, `initialValues`, `dirtyValues`, `touched`, `dirty`, `error`, `fieldErrors`, `response`, `meta`, `isCreateMode`, `isUpdateMode`, `isLoading` and one flag per action
+- State: `mode`, `itemId`, `fields`, `values`, `initialValues`, `dirtyValues`, `touched`, `dirty`, `error`, `fieldErrors`, `response`, `schema`, `isCreateMode`, `isUpdateMode`, `isLoading` and one flag per action
 - Actions: `readItem`, `createItem`, `updateItem`, `deleteItem`, `setValue(name, value)`, `setFieldError(name, message)`, `setFieldErrors(errors)`, `clearErrors`, `resetForm`, `refresh`
 
 Actions never throw: a failed request is stored in `error` and `fieldErrors`.
@@ -149,8 +189,8 @@ See [CLAUDE.md](./CLAUDE.md) for the engineering rules, [LIFECYCLE.md](./LIFECYC
 - Components lost their framework prefix: `ReactForm` and `VueForm` are now `Form`, `ReactFormField` and `VueFormField` are now `FormField`, and so on. `ReactFormProvider` is gone: pass the options as props, or write a wrapper around `Form`.
 - Vue: the default export and the plugin are gone. Import the components directly.
 - Handlers take one argument, the form state: `read(state)`, `update(state)`, and so on. React's `read(itemId, context)` becomes `read(state)` with `state.itemId`.
-- `resolveMode` replaces React's `isNewItemCheck` and returns `'create'` or `'update'` (lowercase). The default treats `'+'` and an empty id as create; React used `'create'`.
-- `validateSchema(state)` rejects to stop the request. React's `{ success, errors }` return value is gone: throw `{ errors }` instead, and the default `errorAdapter` turns it into `fieldErrors`.
+- `modeDetector` replaces React's `isNewItemCheck` and returns `'create'` or `'update'` (lowercase). It has no default: you decide which ids mean create.
+- `schemaValidator(state)` rejects to stop the request. React's `{ success, errors }` return value is gone: throw an error and return it as `fieldErrors` from the operation's `onError`.
 - Field errors live in `context.fieldErrors`. `FormField` gets `error` as a string.
 - React: `FormField` gives `inputProps` (`{ name, value, onChange }`) where it gave `field`; `field` is now the field definition, as in Vue.
 - React `FormDelete` and Vue `FormDelete` now both show only in update mode.

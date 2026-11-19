@@ -2,7 +2,7 @@
  * In-memory users API with a short delay, so the demo shows every loading state without a backend.
  * The data resets on a full page reload.
  */
-import type { ItemResponse, Values } from '@shilp.dev/vue-form'
+import type { Values } from '@shilp.dev/vue-form'
 
 export interface User {
   id: number
@@ -35,11 +35,6 @@ function findUser(id: unknown): User {
   return user
 }
 
-function toResponse(user: User): ItemResponse {
-  const { name, email, role } = user
-  return { values: { name, email, role }, id: user.id }
-}
-
 /** Shows server-side field errors: the API rejects an email that another user has. */
 function assertUniqueEmail(values: Values, id?: number) {
   const taken = users.some((user) => {
@@ -61,12 +56,12 @@ export async function listUsers(): Promise<User[]> {
   })
 }
 
-export async function readUser(id: unknown): Promise<ItemResponse> {
+export async function readUser(id: unknown): Promise<User> {
   await wait()
-  return toResponse(findUser(id))
+  return { ...findUser(id) }
 }
 
-export async function createUser(values: Values): Promise<ItemResponse> {
+export async function createUser(values: Values): Promise<User> {
   await wait()
   assertUniqueEmail(values)
   const user: User = {
@@ -76,20 +71,19 @@ export async function createUser(values: Values): Promise<ItemResponse> {
     role: String(values.role),
   }
   users.push(user)
-  return toResponse(user)
+  return { ...user }
 }
 
-export async function updateUser(id: unknown, values: Values): Promise<ItemResponse> {
+export async function updateUser(id: unknown, values: Values): Promise<User> {
   await wait()
   const user = findUser(id)
   assertUniqueEmail(values, user.id)
   Object.assign(user, values)
-  return toResponse(user)
+  return { ...user }
 }
 
-export async function deleteUser(id: unknown): Promise<ItemResponse> {
+export async function deleteUser(id: unknown): Promise<void> {
   await wait()
   const user = findUser(id)
   users.splice(users.indexOf(user), 1)
-  return {}
 }
