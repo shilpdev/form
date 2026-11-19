@@ -4,8 +4,6 @@ import type { Field, Values } from './field'
 /** `create` when there is no item yet, `update` when `itemId` points at an existing item. */
 export type FormMode = 'create' | 'update'
 
-export type FormAction = 'create' | 'update' | 'delete'
-
 /** Loose object for consumer data the library passes through without reading it. */
 export type Meta = Record<string, unknown>
 

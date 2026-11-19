@@ -2,14 +2,10 @@ import equal from 'fast-deep-equal'
 import type {
   Field,
   FieldErrors,
-  FormAction,
   FormMode,
   FormPropsBase,
-  FormState,
   Values,
 } from './types'
-import { ACTION_LABELS } from './constants'
-import { LOADING_MESSAGE } from './messages'
 
 export const resolveSchema = (
   mode: FormMode,
@@ -113,35 +109,4 @@ export const getInputValue = (input: unknown): unknown => {
     return target.checked
   }
   return target.value
-}
-
-/*
- * Create shows in create mode only. Update and delete show in update mode only, and delete is
- * hidden while the item is being read so a half-loaded item cannot be deleted.
- */
-export const isActionVisible = (action: FormAction, state: FormState): boolean => {
-  if (action === 'create') {
-    return state.isCreateMode
-  }
-  if (!state.isUpdateMode) {
-    return false
-  }
-  if (action === 'update') {
-    return true
-  }
-  if (state.isReading) {
-    return false
-  }
-  return true
-}
-
-export const getActionLabel = (action: FormAction, state: FormState): string => {
-  const labels = ACTION_LABELS[action]
-  if (state[labels.flag]) {
-    return labels.running
-  }
-  if (state.isReading) {
-    return LOADING_MESSAGE
-  }
-  return labels.idle
 }
