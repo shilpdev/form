@@ -15,6 +15,11 @@ export const getErrorMessage = (error: { name: string; message: string }): strin
   return `${error.name}: ${error.message}`
 }
 
+/** Warned when two operations share a `key`; the first one is used. */
+export const getDuplicateOperationKeyMessage = (key: string): string => {
+  return `More than one operation has the key "${key}". The first one is used.`
+}
+
 export const getFieldNotFoundMessage = (name: string): string => {
   return `Field "${name}" not found in the schema`
 }

@@ -59,30 +59,30 @@
               </FormError>
 
               <div class="flex flex-wrap gap-2">
-                <FormCreate v-slot="{ context: scope }">
+                <FormCreate v-slot="{ context: scope, run }">
                   <UButton
                     :loading="scope.isCreating"
                     :disabled="scope.isLoading"
                     label="Create"
-                    @click="scope.createItem"
+                    @click="run"
                   />
                 </FormCreate>
-                <FormUpdate v-slot="{ context: scope }">
+                <FormUpdate v-slot="{ context: scope, run }">
                   <UButton
                     :loading="scope.isUpdating"
                     :disabled="scope.isLoading"
                     label="Update"
-                    @click="scope.updateItem"
+                    @click="run"
                   />
                 </FormUpdate>
-                <FormDelete v-slot="{ context: scope }">
+                <FormDelete v-slot="{ context: scope, run }">
                   <UButton
                     color="error"
                     variant="outline"
                     :loading="scope.isDeleting"
                     :disabled="scope.isLoading"
                     label="Delete"
-                    @click="scope.deleteItem"
+                    @click="run"
                   />
                 </FormDelete>
               </div>
@@ -147,9 +147,11 @@ const readOperation: OperationConfig = {
 const createOperation: OperationConfig = {
   schema: userSchema,
   onError,
+  onSuccess: (state) => {
+    navigateTo(`/users/${state.response?.id}`)
+  },
   handler: async (state): Promise<OperationResponse> => {
     const { id, name, email, role } = await createUser(state.values)
-    await navigateTo(`/users/${id}`)
     return { values: { name, email, role }, id }
   },
 }

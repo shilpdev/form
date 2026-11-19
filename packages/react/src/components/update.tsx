@@ -1,10 +1,14 @@
 import { LOADING_MESSAGE, UPDATE_MESSAGE, UPDATING_MESSAGE } from '@shared/messages'
 import { useFormContext } from '../context/form-context'
-import type { FormPartProps } from '../types'
+import type { FormActionProps } from '../types'
 import { Slot } from './slot'
 
-export const FormUpdate = ({ children }: FormPartProps) => {
+export const FormUpdate = ({ children }: FormActionProps) => {
   const context = useFormContext()
+
+  const run = () => {
+    return context.runOperation('update')
+  }
 
   if (!context.isUpdateMode) {
     return null
@@ -20,11 +24,11 @@ export const FormUpdate = ({ children }: FormPartProps) => {
   return (
     <Slot
       className="shilp-form__update"
-      scope={{ context }}
+      scope={{ context, run }}
       children={children}
       fallback={() => {
         return (
-          <button type="button" onClick={context.updateItem} disabled={context.isLoading}>
+          <button type="button" onClick={run} disabled={context.isLoading}>
             {label}
           </button>
         )

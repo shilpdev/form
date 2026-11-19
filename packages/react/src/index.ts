@@ -5,6 +5,7 @@ export { FormFieldError } from './components/field-error'
 export { FormCreate } from './components/create'
 export { FormUpdate } from './components/update'
 export { FormDelete } from './components/delete'
+export { FormOperation } from './components/operation'
 export { FormError } from './components/error'
 export { useFormContext } from './context/form-context'
 
@@ -13,6 +14,8 @@ export type {
   FormFieldProps,
   FormFieldErrorProps,
   FormFieldErrorScope,
+  FormOperationProps,
+  FormActionProps,
   FormPartProps,
   InputProps,
   ReactFieldScope,

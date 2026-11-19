@@ -5,13 +5,16 @@ import type {
   OperationResponse,
   OperationConfig,
   OperationError,
+  OperationItem,
   Values,
 } from '@shared'
+import { getDuplicateOperationKeyMessage } from '@shared/messages'
 import {
   addTouched,
   cloneValues,
   getDefaultValues,
   getDirtyValues,
+  getOperations,
   mergeWithDefaults,
   resolveSchema,
   setFieldErrorIn,
@@ -51,6 +54,7 @@ export function Form(props: FormProps) {
     read,
     update,
     delete: remove,
+    operations: customOperations,
     modeDetector,
     fieldsGenerator,
     schemaValidator,
@@ -62,6 +66,13 @@ export function Form(props: FormProps) {
   const isCreateMode = mode === 'create'
   const isUpdateMode = mode === 'update'
   const targetSchema = resolveSchema(mode, { create, update })
+  const operations = getOperations({
+    create,
+    read,
+    update,
+    delete: remove,
+    operations: customOperations,
+  })
 
   // Memoized on the schema so an inline `fieldsGenerator` does not rebuild the fields every render.
   const fields = useMemo(() => {
@@ -79,16 +90,17 @@ export function Form(props: FormProps) {
     _setData(dataRef.current)
   }
 
-  const [isReading, _setIsReading] = useState(false)
-  const [isCreating, _setIsCreating] = useState(false)
-  const [isUpdating, _setIsUpdating] = useState(false)
-  const [isDeleting, _setIsDeleting] = useState(false)
-  const isLoading = isReading || isCreating || isUpdating || isDeleting
+  const [running, _setRunning] = useState<Record<string, boolean>>({})
+  const isReading = Boolean(running.read)
+  const isCreating = Boolean(running.create)
+  const isUpdating = Boolean(running.update)
+  const isDeleting = Boolean(running.delete)
+  const isLoading = Object.values(running).some(Boolean)
 
   const state: FormState = {
     mode,
     itemId,
-    schema: targetSchema,
+    operations,
     fields,
     values: data.values,
     initialValues: data.initialValues,
@@ -109,13 +121,11 @@ export function Form(props: FormProps) {
   const stateRef = useRef(state)
   stateRef.current = state
 
-  /** The rendered state with the latest form data and the schema and meta of the operation being run. */
-  const getState = (operation: OperationConfig): FormState => {
+  /** The rendered state with the latest form data, for handlers that run after an `await`. */
+  const getState = (): FormState => {
     const current = dataRef.current
     return {
       ...stateRef.current,
-      schema: operation.schema,
-      meta: operation.meta,
       values: current.values,
       initialValues: current.initialValues,
       dirtyValues: getDirtyValues(current.dirty, current.values),
@@ -140,76 +150,62 @@ export function Form(props: FormProps) {
     }
   }
 
-  const onError = (operation: OperationConfig) => {
-    return (error: unknown) => {
-      // A TypeError is a bug in the consumer's code, not an API error, so it is logged too.
-      if (error instanceof TypeError) {
-        console.error(error)
-      }
-      const operationError = operation.onError?.(error, getState(operation))
-      if (operationError) {
-        setError(operationError)
-      }
+  const onError = ({ error, operation }: { error: unknown; operation: OperationConfig }) => {
+    // A TypeError is a bug in the consumer's code, not an API error, so it is logged too.
+    if (error instanceof TypeError) {
+      console.error(error)
+    }
+    const operationError = operation.onError?.(error, getState())
+    if (operationError) {
+      setError(operationError)
     }
   }
 
-  const onResponse = (operation: OperationConfig) => {
-    return (response: OperationResponse) => {
-      let patch: Partial<FormData> = { response }
-      if (response.values) {
-        patch = { ...patch, ...loadValues(response.values) }
-      }
-      commit(patch)
-      operation.onSuccess?.(response, getState(operation))
+  const validate = (operation: OperationItem) => {
+    if (operation.schema) {
+      return schemaValidator(getState(), operation)
     }
+    return Promise.resolve()
   }
 
-  const readItem = () => {
-    _setIsReading(true)
+  const getOperation = (key: string) => {
+    const matches = operations.filter((item) => {
+      return item.key === key
+    })
+    if (matches.length > 1) {
+      console.warn(getDuplicateOperationKeyMessage(key))
+    }
+    return matches[0]
+  }
+
+  const runOperation = (key: string) => {
+    const operation = getOperation(key)
+    _setRunning((current) => {
+      return { ...current, [key]: true }
+    })
     setError(null)
-    return read!
-      .handler(getState(read!))
-      .then(onResponse(read!))
-      .catch(onError(read!))
+    return validate(operation)
+      .then(() => operation.handler(getState()))
+      .then((response) => {
+        let patch: Partial<FormData> = { response }
+        if (response.values) {
+          patch = { ...patch, ...loadValues(response.values) }
+        }
+        commit(patch)
+        operation.onSuccess?.(getState())
+      })
+      .catch((error) => {
+        return onError({ error, operation })
+      })
       .finally(() => {
-        _setIsReading(false)
+        _setRunning((current) => {
+          return { ...current, [key]: false }
+        })
       })
   }
 
-  const createItem = () => {
-    _setIsCreating(true)
-    setError(null)
-    return schemaValidator(getState(create!))
-      .then(() => create!.handler(getState(create!)))
-      .then(onResponse(create!))
-      .catch(onError(create!))
-      .finally(() => {
-        _setIsCreating(false)
-      })
-  }
-
-  const updateItem = () => {
-    _setIsUpdating(true)
-    setError(null)
-    return schemaValidator(getState(update!))
-      .then(() => update!.handler(getState(update!)))
-      .then(onResponse(update!))
-      .catch(onError(update!))
-      .finally(() => {
-        _setIsUpdating(false)
-      })
-  }
-
-  const deleteItem = () => {
-    _setIsDeleting(true)
-    setError(null)
-    return remove!
-      .handler(getState(remove!))
-      .then(onResponse(remove!))
-      .catch(onError(remove!))
-      .finally(() => {
-        _setIsDeleting(false)
-      })
+  const isRunning = (key: string) => {
+    return Boolean(running[key])
   }
 
   const setValue = (name: string, value: unknown) => {
@@ -245,7 +241,7 @@ export function Form(props: FormProps) {
 
   const init = () => {
     if (isUpdateMode) {
-      readItem()
+      runOperation('read')
       return
     }
     commit({ ...EMPTY_DATA, ...loadValues(getDefaultValues(fields)) })
@@ -264,10 +260,8 @@ export function Form(props: FormProps) {
 
   const context: FormContext = {
     ...state,
-    readItem,
-    createItem,
-    updateItem,
-    deleteItem,
+    runOperation,
+    isRunning,
     setValue,
     setFieldError,
     setFieldErrors,

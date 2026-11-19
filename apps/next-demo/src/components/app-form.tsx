@@ -1,6 +1,6 @@
 'use client'
 
-import { Form, type Field, type FormMode, type FormProps, type FormState } from '@shilp.dev/react-form'
+import { Form, type Field, type FormMode, type FormProps, type FormState, type OperationItem } from '@shilp.dev/react-form'
 import type { ZodObject } from 'zod'
 
 type AppFormProps = Pick<FormProps, 'itemId' | 'read' | 'create' | 'update' | 'delete' | 'children'>
@@ -25,8 +25,8 @@ const fieldsGenerator = ({ schema }: { schema: ZodObject | undefined }): Field[]
 /*
  * Throws the Zod issues as `errors`, which `onError` on the user page turns into `fieldErrors`.
  */
-const schemaValidator = async (state: FormState) => {
-  const schema = state.schema as ZodObject | undefined
+const schemaValidator = async (state: FormState, operation: OperationItem) => {
+  const schema = operation.schema as ZodObject | undefined
   if (!schema) {
     return
   }

@@ -23,6 +23,7 @@ import {
   type FormMode,
   type FormProps,
   type FormState,
+  type OperationItem,
 } from '@shilp.dev/vue-form'
 import type { ZodObject } from 'zod'
 
@@ -48,8 +49,8 @@ function fieldsGenerator({ schema }: { schema: ZodObject | undefined }): Field[]
 /*
  * Throws the Zod issues as `errors`, which `onError` on the user page turns into `fieldErrors`.
  */
-async function schemaValidator(state: FormState) {
-  const schema = state.schema as ZodObject | undefined
+async function schemaValidator(state: FormState, operation: OperationItem) {
+  const schema = operation.schema as ZodObject | undefined
   if (!schema) {
     return
   }

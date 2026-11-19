@@ -4,6 +4,7 @@ import type {
   FieldErrors,
   FormMode,
   FormPropsBase,
+  OperationItem,
   Values,
 } from './types'
 
@@ -15,6 +16,29 @@ export const resolveSchema = (
     return props.create?.schema
   }
   return props.update?.schema
+}
+
+/*
+ * The built-in operations first, each with its key, then the custom ones. A built-in operation is
+ * listed only when its prop is given.
+ */
+export const getOperations = (
+  props: Pick<FormPropsBase, 'create' | 'read' | 'update' | 'delete' | 'operations'>,
+): OperationItem[] => {
+  const operations: OperationItem[] = []
+  if (props.create) {
+    operations.push({ ...props.create, key: 'create' })
+  }
+  if (props.read) {
+    operations.push({ ...props.read, key: 'read' })
+  }
+  if (props.update) {
+    operations.push({ ...props.update, key: 'update' })
+  }
+  if (props.delete) {
+    operations.push({ ...props.delete, key: 'delete' })
+  }
+  return [...operations, ...(props.operations ?? [])]
 }
 
 export const getDefaultValues = (fields: Field[]): Values => {

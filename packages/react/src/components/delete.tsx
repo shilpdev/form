@@ -1,10 +1,14 @@
 import { DELETE_MESSAGE, DELETING_MESSAGE, LOADING_MESSAGE } from '@shared/messages'
 import { useFormContext } from '../context/form-context'
-import type { FormPartProps } from '../types'
+import type { FormActionProps } from '../types'
 import { Slot } from './slot'
 
-export const FormDelete = ({ children }: FormPartProps) => {
+export const FormDelete = ({ children }: FormActionProps) => {
   const context = useFormContext()
+
+  const run = () => {
+    return context.runOperation('delete')
+  }
 
   if (!(context.isUpdateMode && !context.isReading)) {
     return null
@@ -20,11 +24,11 @@ export const FormDelete = ({ children }: FormPartProps) => {
   return (
     <Slot
       className="shilp-form__delete"
-      scope={{ context }}
+      scope={{ context, run }}
       children={children}
       fallback={() => {
         return (
-          <button type="button" onClick={context.deleteItem} disabled={context.isLoading}>
+          <button type="button" onClick={run} disabled={context.isLoading}>
             {label}
           </button>
         )

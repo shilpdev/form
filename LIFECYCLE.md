@@ -1,6 +1,6 @@
 # Form lifecycle
 
-How `Form` behaves from setup to a response, in both `@shilp.dev/react-form` and `@shilp.dev/vue-form`. The two packages follow the same steps. The matching numbered comments are in `packages/react/src/components/form.tsx` and `packages/vue/src/components/form.vue`, and each action is its own function in both.
+How `Form` behaves from setup to a response, in both `@shilp.dev/react-form` and `@shilp.dev/vue-form`. The two packages follow the same steps. The matching numbered comments are in `packages/react/src/components/form.tsx` and `packages/vue/src/components/form.vue`, and every action goes through one `runOperation(key)` in both.
 
 ## Timeline
 
@@ -19,7 +19,7 @@ sequenceDiagram
     Form->>Form: values = field defaults
   end
   Note over Form: 2. Action (create, update, delete)
-  App->>Form: createItem()
+  App->>Form: runOperation('create')
   Form->>V: schemaValidator(state) (create and update only)
   Form->>H: create(state)
   alt 3. Response
@@ -38,20 +38,20 @@ sequenceDiagram
 - The options (`modeDetector`, `fieldsGenerator`, `schemaValidator`) are required props of `Form`; there are no defaults.
 - `modeDetector({ itemId })` sets the mode. It is a required prop and has no default.
 - The schema in use is `create.schema` in create mode and `update.schema` in update mode. `fieldsGenerator` turns it into fields (`{ name, label, value? }`).
-- Update mode: `readItem()` runs (step 2 without validation). Create mode: `values` are the field defaults (`field.value`, or `null`), and `error` and `response` are cleared.
+- Update mode: `runOperation('read')` runs (step 2 without validation). Create mode: `values` are the field defaults (`field.value`, or `null`), and `error` and `response` are cleared.
 - Setup runs again whenever `itemId` changes, and on `refresh()`. In React it runs in an effect, so React StrictMode reads twice in development.
 
 ### 2. Action
 
-Every action (`readItem`, `createItem`, `updateItem`, `deleteItem`):
+Every `runOperation(key)` call runs the operation with that key:
 
-1. Sets its flag (`isCreating`, ...) and so `isLoading`.
+1. Sets the flag of its key (`isCreating`, ..., or `isRunning(key)`) and so `isLoading`.
 2. Clears `error` and `fieldErrors`.
-3. `createItem` and `updateItem` only: calls `schemaValidator(state)`, where `state.schema` and `state.meta` come from the operation being run. A rejection goes to step 5 and the handler is not called.
-4. Calls the handler with the latest state, then `onResponse` (step 3 below), which also calls the operation's `onSuccess(response, state)`. In React the state includes values set in the same event.
+3. Only when the operation has a `schema`: calls `schemaValidator(state, operation)`, where `operation` is the one being run, so its `schema` is there. A rejection goes to step 5 and the handler is not called.
+4. Calls the handler with the latest state, then stores the response (step 3 below) and calls the operation's `onSuccess(state)`. In React the state includes values set in the same event.
 5. A rejection goes to `onError`: a `TypeError` is logged, and the operation's `onError(error, state)` runs. If it returns an `OperationError`, that sets `error` and `fieldErrors`; if the operation has no `onError`, or it returns nothing, they stay empty. The flag is cleared at the end either way.
 
-The whole flow is one chain: `operation.handler(state).then(onResponse).catch(onError).finally(...)`. The operations you use must be passed: calling an action whose operation is missing throws a `TypeError` straight away.
+The whole flow is one chain: `operation.handler(state).then(...store the response).catch(...onError).finally(...)`. The operations you use must be passed: calling an action whose operation is missing throws a `TypeError` straight away. If two operations share a `key`, a warning is logged and the first one is used.
 
 ### 3. Response
 

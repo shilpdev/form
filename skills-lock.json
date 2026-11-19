@@ -1,0 +1,54 @@
+{
+  "version": 2,
+  "skills": {
+    "conventions": {
+      "source": "7span/skills",
+      "commit": "6c1375b4c2ea84917cb10be890d0e398750df534",
+      "sourceType": "github",
+      "skillPath": "7span-skills/conventions/SKILL.md",
+      "computedHash": "64503139961cc87b413b61e58a5ef990a4d4e969179fe2b4ac1841d063301b6c"
+    },
+    "css": {
+      "source": "7span/skills",
+      "commit": "6c1375b4c2ea84917cb10be890d0e398750df534",
+      "sourceType": "github",
+      "skillPath": "7span-skills/css/SKILL.md",
+      "computedHash": "26538589bafae122eb0cb229149ee11e3cb7f8109006900d04371dc48254fbeb"
+    },
+    "directus": {
+      "source": "7span/skills",
+      "commit": "6c1375b4c2ea84917cb10be890d0e398750df534",
+      "sourceType": "github",
+      "skillPath": "7span-skills/directus/SKILL.md",
+      "computedHash": "a6857e9681cc9aa5efa58c0ec6ad2f6d56e8c262b096f5176dc5e45052ace93c"
+    },
+    "html": {
+      "source": "7span/skills",
+      "commit": "6c1375b4c2ea84917cb10be890d0e398750df534",
+      "sourceType": "github",
+      "skillPath": "7span-skills/html/SKILL.md",
+      "computedHash": "97902339f3277c07ebf6ce598505f0ecf2a8270978c79877cdae118a61a01d89"
+    },
+    "javascript": {
+      "source": "7span/skills",
+      "commit": "6c1375b4c2ea84917cb10be890d0e398750df534",
+      "sourceType": "github",
+      "skillPath": "7span-skills/javascript/SKILL.md",
+      "computedHash": "85c26c1db0eb80473d587dda4ee8a4cbecf3f9cbe27bbfe364e6ab0d15d39365"
+    },
+    "patterns": {
+      "source": "7span/skills",
+      "commit": "6c1375b4c2ea84917cb10be890d0e398750df534",
+      "sourceType": "github",
+      "skillPath": "7span-skills/patterns/SKILL.md",
+      "computedHash": "73fa5eea67013fd1d6c96e89bc3e755903983a5653f26f6c4e756bc78bdc208d"
+    },
+    "tailwind": {
+      "source": "7span/skills",
+      "commit": "6c1375b4c2ea84917cb10be890d0e398750df534",
+      "sourceType": "github",
+      "skillPath": "7span-skills/tailwind/SKILL.md",
+      "computedHash": "0652a968e38898c06fe032cadac9660aec2540e0712bbcf4df6ada54c9fb66e6"
+    }
+  }
+}

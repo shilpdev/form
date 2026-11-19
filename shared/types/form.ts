@@ -14,12 +14,12 @@ export interface OperationResponse {
   [key: string]: unknown
 }
 
-/** Data only (no methods): handed to the handlers and `schemaValidator`. */
+/** Data only (no methods): handed to the handlers, `schemaValidator` and the callbacks. */
 export interface FormState {
   mode: FormMode
   itemId?: string | number
-  /** The schema in use: the one of the operation being run, or of the current mode in the context. */
-  schema?: unknown
+  /** Every operation: the built-in ones that were given, then the custom ones. */
+  operations: OperationItem[]
   fields: Field[]
   values: Values
   initialValues: Values
@@ -31,8 +31,6 @@ export interface FormState {
   error: OperationError | null
   /** Per-field messages: from `error.fieldErrors`, plus any set with `setFieldError`. */
   fieldErrors: FieldErrors
-  /** The `meta` of the operation being run. Not set in the context. */
-  meta?: Meta
   response: OperationResponse | null
   isCreateMode: boolean
   isUpdateMode: boolean
@@ -44,10 +42,10 @@ export interface FormState {
 }
 
 export interface FormActions {
-  readItem: () => Promise<void>
-  createItem: () => Promise<void>
-  updateItem: () => Promise<void>
-  deleteItem: () => Promise<void>
+  /** Runs the operation with this `key`: a built-in one (`create`, ...) or a custom one. */
+  runOperation: (key: string) => Promise<void>
+  /** True while the operation with this `key` is running. */
+  isRunning: (key: string) => boolean
   /** Sets one value, marks the field touched, updates `dirty` and clears that field's error. */
   setValue: (name: string, value: unknown) => void
   setFieldError: (name: string, message: string | null) => void
@@ -69,17 +67,24 @@ export interface OperationConfig {
    * `unknown` because every operation may use a different schema type: the library never reads it,
    * only your `fieldsGenerator` and `schemaValidator` do.
    */
+  /** When set, `schemaValidator` runs before the handler. Without it, nothing is validated. */
   schema?: unknown
   handler: ItemHandler
-  /** Runs after the response is stored. */
-  onSuccess?(response: OperationResponse, state: FormState): void
+  /** Runs after the response is stored and its `values` are loaded: `state.response` is the response. */
+  onSuccess?(state: FormState): void
   /*
    * Gets whatever the handler or `schemaValidator` threw. Return an `OperationError` to set `error`
    * and `fieldErrors`; return nothing to leave them empty.
    */
   onError?(error: unknown, state: FormState): OperationError | undefined
-  /** Passed to this operation's handler, `schemaValidator` and `onError` as `state.meta`. */
+  /** Free-form data for your own use. Read it back from `state.operations`. */
   meta?: Meta
+}
+
+/** One entry of the flat operation list: the built-in ones and the custom ones together. */
+export interface OperationItem extends OperationConfig {
+  /** Unique. `create`, `read`, `update` and `delete` are taken by the built-in operations. */
+  key: string
 }
 
 /*
@@ -92,14 +97,26 @@ export interface FormPropsBase {
   read?: OperationConfig
   update?: OperationConfig
   delete?: OperationConfig
+  /** Custom operations. Each needs a unique `key`; run one with `runOperation(key)`. */
+  operations?: OperationItem[]
   /** Required: the library does not decide which item ids mean create mode. */
   modeDetector(input: { itemId?: string | number }): FormMode
   /** Required: turns the schema of the current mode into the list of fields. */
   fieldsGenerator(input: { schema: unknown }): Field[]
-  /** Runs before `create` and `update`. Throw (or reject) to stop the request. */
-  schemaValidator(state: FormState): Promise<unknown>
+  /** Runs before the handler of an operation that has a `schema`. Throw (or reject) to stop the request. */
+  schemaValidator(state: FormState, operation: OperationItem): Promise<unknown>
 }
 
 export interface FormScope {
   context: FormContext
+}
+
+/** Scope of the operation buttons: the context plus `run`, which runs the button's operation. */
+export interface OperationScope extends FormScope {
+  run: () => Promise<void>
+}
+
+/** The `operation` prop of `FormOperation`: the `key` of the operation its button runs. */
+export interface OperationPropsBase {
+  operation: string
 }

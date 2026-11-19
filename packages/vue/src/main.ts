@@ -5,6 +5,7 @@ export { default as FormFieldError } from './components/field-error.vue'
 export { default as FormCreate } from './components/create.vue'
 export { default as FormUpdate } from './components/update.vue'
 export { default as FormDelete } from './components/delete.vue'
+export { default as FormOperation } from './components/operation.vue'
 export { default as FormError } from './components/error.vue'
 export { useFormContext } from './composables/use-form-context'
 

@@ -50,9 +50,11 @@ export default function UserPage() {
   const createOperation: OperationConfig = {
     schema: userSchema,
     onError,
+    onSuccess: (state) => {
+      router.push(`/users/${state.response?.id}`)
+    },
     handler: async (state): Promise<OperationResponse> => {
       const { id, name, email, role } = await createUser(state.values)
-      router.push(`/users/${id}`)
       return { values: { name, email, role }, id }
     },
   }

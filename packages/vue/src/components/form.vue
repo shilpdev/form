@@ -13,13 +13,16 @@ import type {
   OperationResponse,
   OperationConfig,
   OperationError,
+  OperationItem,
   Values,
 } from '@shared'
+import { getDuplicateOperationKeyMessage } from '@shared/messages'
 import {
   addTouched,
   cloneValues,
   getDefaultValues,
   getDirtyValues,
+  getOperations,
   mergeWithDefaults,
   resolveSchema,
   setFieldErrorIn,
@@ -42,13 +45,30 @@ const dirty = ref<string[]>([])
 const fieldErrors = ref<FieldErrors>({})
 const error = ref<OperationError | null>(null)
 const response = ref<OperationResponse | null>(null)
-const isReading = ref(false)
-const isCreating = ref(false)
-const isUpdating = ref(false)
-const isDeleting = ref(false)
+const running = ref<Record<string, boolean>>({})
+
+const isReading = computed(() => {
+  return Boolean(running.value.read)
+})
+
+const isCreating = computed(() => {
+  return Boolean(running.value.create)
+})
+
+const isUpdating = computed(() => {
+  return Boolean(running.value.update)
+})
+
+const isDeleting = computed(() => {
+  return Boolean(running.value.delete)
+})
 
 const isLoading = computed(() => {
-  return isReading.value || isCreating.value || isUpdating.value || isDeleting.value
+  return Object.values(running.value).some(Boolean)
+})
+
+const operations = computed(() => {
+  return getOperations(props)
 })
 
 const mode = computed(() => {
@@ -76,9 +96,7 @@ const state: FormState = reactive({
   itemId: computed(() => {
     return props.itemId
   }),
-  schema: computed(() => {
-    return resolveSchema(mode.value, props)
-  }),
+  operations,
   fields,
 
   mode,
@@ -99,15 +117,10 @@ const state: FormState = reactive({
   isDeleting,
 })
 
-/*
- * A plain snapshot (no methods, no proxies) for the handlers and `schemaValidator`,
- * with the schema and meta of the operation being run.
- */
-const getState = (operation: OperationConfig): FormState => {
+/** A plain snapshot (no methods, no proxies) for the handlers, `schemaValidator` and the callbacks. */
+const getState = (): FormState => {
   return {
     ...state,
-    schema: operation.schema,
-    meta: operation.meta,
     values: toRaw(state.values),
     initialValues: toRaw(state.initialValues),
     touched: toRaw(state.touched),
@@ -133,77 +146,57 @@ function setError(newError: OperationError | null) {
   }
 }
 
-function onError(operation: OperationConfig) {
-  return (newError: unknown) => {
-    // A TypeError is a bug in the consumer's code, not an API error, so it is logged too.
-    if (newError instanceof TypeError) {
-      console.error(newError)
-    }
-    const operationError = operation.onError?.(newError, getState(operation))
-    if (operationError) {
-      setError(operationError)
-    }
+function onError({ error: newError, operation }: { error: unknown; operation: OperationConfig }) {
+  // A TypeError is a bug in the consumer's code, not an API error, so it is logged too.
+  if (newError instanceof TypeError) {
+    console.error(newError)
+  }
+  const operationError = operation.onError?.(newError, getState())
+  if (operationError) {
+    setError(operationError)
   }
 }
 
-function onResponse(operation: OperationConfig) {
-  return (newResponse: OperationResponse) => {
-    response.value = newResponse
-    if (newResponse.values) {
-      loadValues(newResponse.values)
-    }
-    operation.onSuccess?.(newResponse, getState(operation))
+function validate(operation: OperationItem) {
+  if (operation.schema) {
+    return props.schemaValidator(getState(), operation)
   }
+  return Promise.resolve()
 }
 
-function readItem() {
-  isReading.value = true
+function getOperation(key: string) {
+  const matches = operations.value.filter((item) => {
+    return item.key === key
+  })
+  if (matches.length > 1) {
+    console.warn(getDuplicateOperationKeyMessage(key))
+  }
+  return matches[0]
+}
+
+function runOperation(key: string) {
+  const operation = getOperation(key)
+  running.value = { ...running.value, [key]: true }
   setError(null)
-  return props
-    .read!.handler(getState(props.read!))
-    .then(onResponse(props.read!))
-    .catch(onError(props.read!))
+  return validate(operation)
+    .then(() => operation.handler(getState()))
+    .then((newResponse) => {
+      response.value = newResponse
+      if (newResponse.values) {
+        loadValues(newResponse.values)
+      }
+      operation.onSuccess?.(getState())
+    })
+    .catch((error) => {
+      return onError({ error, operation })
+    })
     .finally(() => {
-      isReading.value = false
+      running.value = { ...running.value, [key]: false }
     })
 }
 
-function createItem() {
-  isCreating.value = true
-  setError(null)
-  return props
-    .schemaValidator(getState(props.create!))
-    .then(() => props.create!.handler(getState(props.create!)))
-    .then(onResponse(props.create!))
-    .catch(onError(props.create!))
-    .finally(() => {
-      isCreating.value = false
-    })
-}
-
-function updateItem() {
-  isUpdating.value = true
-  setError(null)
-  return props
-    .schemaValidator(getState(props.update!))
-    .then(() => props.update!.handler(getState(props.update!)))
-    .then(onResponse(props.update!))
-    .catch(onError(props.update!))
-    .finally(() => {
-      isUpdating.value = false
-    })
-}
-
-function deleteItem() {
-  isDeleting.value = true
-  setError(null)
-  return props
-    .delete!.handler(getState(props.delete!))
-    .then(onResponse(props.delete!))
-    .catch(onError(props.delete!))
-    .finally(() => {
-      isDeleting.value = false
-    })
+function isRunning(key: string) {
+  return Boolean(running.value[key])
 }
 
 function setValue(name: string, value: unknown) {
@@ -236,7 +229,7 @@ function resetForm() {
 
 function init() {
   if (isUpdateMode.value) {
-    readItem()
+    runOperation('read')
     return
   }
   response.value = null
@@ -250,10 +243,8 @@ function refresh() {
 
 const context: FormContext = reactive({
   ...toRefs(state),
-  readItem,
-  createItem,
-  updateItem,
-  deleteItem,
+  runOperation,
+  isRunning,
   setValue,
   setFieldError,
   setFieldErrors,

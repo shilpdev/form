@@ -20,7 +20,8 @@ Both packages have the same API: the same component names, props, state keys, ac
 - Tracks `values`, `initialValues`, `dirty`, `dirtyValues` and `touched`
 - One `schema` per operation, so create and update can have different fields
 - Server errors are mapped to field errors by each operation's `onError`
-- Loading flags per action: `isReading`, `isCreating`, `isUpdating`, `isDeleting`
+- Loading flags per operation: `isReading`, `isCreating`, `isUpdating`, `isDeleting`, and `isRunning(key)` for any
+- Custom operations: pass `operations` with your own keys and run one with `runOperation(key)` or `FormOperation`
 - Written in TypeScript, with types included
 
 ## Quick start
@@ -118,21 +119,21 @@ There is no global setup. The options are required props of `Form`. To share the
 | ------ | --------- | ------------ |
 | `modeDetector` | `({ itemId }) => 'create' \| 'update'` | Decides which item ids mean create (for example `undefined` or `'+'`) |
 | `fieldsGenerator` | `({ schema }) => Field[]` | Turns the schema of the current mode into `{ name, label, value? }` fields |
-| `schemaValidator` | `(state) => Promise`, reject to stop | Runs before `create` and `update` |
+| `schemaValidator` | `(state, operation) => Promise`, reject to stop | Runs before the handler of every operation that has a `schema`. `operation` is the one being run, so read its `schema` there |
 
 ### `Form` props
 
-`itemId`, the operations `read`, `create`, `update` and `delete`, and the options above. Each operation is an object:
+`itemId`, the operations `read`, `create`, `update` and `delete`, the list `operations` for custom ones, and the options above. Each operation is an object:
 
 | Key | Type | |
 | --- | ---- | --- |
 | `handler` | `(state) => Promise<OperationResponse>` | Required. Does the request |
-| `schema` | anything your `fieldsGenerator` and `schemaValidator` accept | Create mode uses `create.schema` for the fields, update mode uses `update.schema` |
-| `onSuccess` | `(response, state) => void` | After the response is stored |
+| `schema` | anything your `fieldsGenerator` and `schemaValidator` accept | Create mode uses `create.schema` for the fields, update mode uses `update.schema`. When set, `schemaValidator` runs before the handler; without it, nothing is validated |
+| `onSuccess` | `(state) => void` | After the response is stored and its `values` are loaded into the form; the response is `state.response` |
 | `onError` | `(error, state) => OperationError \| undefined` | Gets whatever was thrown. Return `{ name, message, fieldErrors }` to set `error` and `fieldErrors`; return nothing to leave them empty |
-| `meta` | object | Passed to this operation's handler, `schemaValidator` and `onError` as `state.meta` |
+| `meta` | object | Free-form data for your own use; read it back from `state.operations` |
 
-`OperationResponse` is `{ values?: Record<string, unknown>, ...anything else }`. When `values` is present it is loaded into the form; the whole object is stored as `response` and passed to `onSuccess`.
+`OperationResponse` is `{ values?: Record<string, unknown>, ...anything else }`. When `values` is present it is loaded into the form; the whole object is stored as `state.response`, which `onSuccess` reads.
 
 `fields` is the array that `fieldsGenerator` returns for your schema.
 
@@ -140,8 +141,8 @@ There is no global setup. The options are required props of `Form`. To share the
 
 Every slot and render prop gets `{ context }`. `useFormContext()` returns the same object.
 
-- State: `mode`, `itemId`, `fields`, `values`, `initialValues`, `dirtyValues`, `touched`, `dirty`, `error`, `fieldErrors`, `response`, `schema`, `isCreateMode`, `isUpdateMode`, `isLoading` and one flag per action
-- Actions: `readItem`, `createItem`, `updateItem`, `deleteItem`, `setValue(name, value)`, `setFieldError(name, message)`, `setFieldErrors(errors)`, `clearErrors`, `resetForm`, `refresh`
+- State: `mode`, `itemId`, `fields`, `values`, `initialValues`, `dirtyValues`, `touched`, `dirty`, `error`, `fieldErrors`, `response`, `operations`, `isCreateMode`, `isUpdateMode`, `isLoading` and one flag per action
+- Actions: `runOperation(key)` (`'create'`, `'read'`, `'update'`, `'delete'` or a custom key), `isRunning(key)`, `setValue(name, value)`, `setFieldError(name, message)`, `setFieldErrors(errors)`, `clearErrors`, `resetForm`, `refresh`
 
 Actions never throw: a failed request is stored in `error` and `fieldErrors`.
 
@@ -153,9 +154,10 @@ Actions never throw: a failed request is stored in `error` and `fieldErrors`.
 | `FormFields` | always | |
 | `FormField name="..."` | the field is in the schema | `field`, `name`, `label`, `value`, `error`, `updateValue`, plus `inputProps` (React) or `model` and `nativeModel` (Vue) |
 | `FormFieldError name="..."` | the field has an error | `error` |
-| `FormCreate` | create mode | |
-| `FormUpdate` | update mode | |
-| `FormDelete` | update mode, not reading | |
+| `FormCreate` | create mode | `run` |
+| `FormUpdate` | update mode | `run` |
+| `FormDelete` | update mode, not reading | `run` |
+| `FormOperation operation="..."` | always | `run` (runs the operation with that key) |
 | `FormError` | there is an error | |
 
 CSS classes: `shilp-form`, `shilp-form__fields`, `shilp-form__field`, `shilp-form__field-error`, `shilp-form__create`, `shilp-form__update`, `shilp-form__delete`, `shilp-form__error`.

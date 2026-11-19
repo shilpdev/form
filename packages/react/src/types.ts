@@ -1,4 +1,12 @@
-import type { FieldScope, FormContext, FieldPropsBase, FormPropsBase, FormScope } from '@shared'
+import type {
+  FieldScope,
+  FormContext,
+  FieldPropsBase,
+  FormPropsBase,
+  FormScope,
+  OperationPropsBase,
+  OperationScope,
+} from '@shared'
 import type { ChangeEvent, ReactNode, Ref } from 'react'
 
 type Children<Scope> = ReactNode | ((scope: Scope) => ReactNode)
@@ -29,6 +37,15 @@ export interface FormFieldErrorProps extends FieldPropsBase {
 
 export interface FormFieldErrorScope extends FormScope {
   error: string
+}
+
+export interface FormOperationProps extends OperationPropsBase {
+  children?: Children<OperationScope>
+}
+
+/** Props of `FormCreate`, `FormUpdate` and `FormDelete`. */
+export interface FormActionProps {
+  children?: Children<OperationScope>
 }
 
 export interface FormPartProps {
