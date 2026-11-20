@@ -30,7 +30,7 @@ The root component (`Form` in `packages/react/src/components/form.tsx`, `form.vu
 
 Operations are one flat list: `getOperations` (in `shared/utils.ts`) maps `create`, `read`, `update` and `delete` to `{ key, ...config }` and appends the custom `operations`. One executor, `runOperation(key)`, runs any of them as one promise chain (`.then((response) => { store it, run onSuccess }).catch((error) => onError({ error, operation })).finally(...)`): flag on, clear the error, validate (only when the operation has a `schema`), call the handler, store the response, run `onError`, flag off. The action buttons call it with their key (`runOperation('create')`). Errors are stored, never thrown.
 
-React keeps the user-edited data (`values`, `initialValues`, `touched`, `dirty`, `fieldErrors`, `error`, `response`) in one `dataRef` that is updated synchronously and mirrored into state for rendering, so an action called in the same event as `setFieldValue` sends the new value. Vue uses one `ref` each and a `reactive` context. Options (`modeDetector`, `fieldsGenerator`, `schemaValidator`) are required props of `Form`: there are no defaults.
+React keeps the user-edited data (`values`, `initialValues`, `touched`, `dirty`, `fieldErrors`, `error`, `response`) in one `dataRef` that is updated synchronously and mirrored into state for rendering, so an action called in the same event as `setFieldValue` sends the new value. `running` and its flags follow the same pattern in `runningRef`, so `getState()` and `isRunning(key)` see an operation as running as soon as `runOperation` is called. Vue uses one `ref` each and a `reactive` context. Options (`modeDetector`, `fieldsGenerator`, `schemaValidator`) are required props of `Form`: there are no defaults.
 
 ## Engineering rules
 

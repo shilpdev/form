@@ -19,7 +19,7 @@ import {
   generateFieldErrors,
   toggleDirty,
 } from '@shared/utils'
-import { useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
+import { useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { FormContextProvider } from '../context/form-context'
 import type { FormProps } from '../types'
 import { Slot } from './slot'
@@ -45,6 +45,18 @@ const EMPTY_DATA: FormData = {
   fieldErrors: {},
   error: null,
   response: null,
+}
+
+/** The `FormState` keys that come from which operations are running: `running` and its flags. */
+const getRunningState = (running: Record<string, boolean>) => {
+  return {
+    running,
+    isLoading: Object.values(running).some(Boolean),
+    isReading: Boolean(running.read),
+    isCreating: Boolean(running.create),
+    isUpdating: Boolean(running.update),
+    isDeleting: Boolean(running.delete),
+  }
 }
 
 export function Form(props: FormProps) {
@@ -74,13 +86,7 @@ export function Form(props: FormProps) {
     operations: customOperations,
   })
 
-  /*
-   * Memoized on the schema so an inline `fieldsGenerator` does not rebuild the fields every
-   * render.
-   */
-  const fields = useMemo(() => {
-    return fieldsGenerator({ schema: targetSchema })
-  }, [targetSchema])
+  const fields = fieldsGenerator({ schema: targetSchema })
 
   /*
    * `dataRef` is the source of truth and is updated synchronously, so an action called in the same
@@ -93,12 +99,17 @@ export function Form(props: FormProps) {
     _setData(dataRef.current)
   }
 
+  /*
+   * Same pattern as `dataRef`: `runningRef` is updated synchronously, so `getState` and `isRunning`
+   * see an operation as running from the moment `runOperation` is called. `_setRunning` only
+   * triggers the render.
+   */
+  const runningRef = useRef<Record<string, boolean>>({})
   const [running, _setRunning] = useState<Record<string, boolean>>({})
-  const isReading = Boolean(running.read)
-  const isCreating = Boolean(running.create)
-  const isUpdating = Boolean(running.update)
-  const isDeleting = Boolean(running.delete)
-  const isLoading = Object.values(running).some(Boolean)
+  const setRunning = (key: string, isKeyRunning: boolean) => {
+    runningRef.current = { ...runningRef.current, [key]: isKeyRunning }
+    _setRunning(runningRef.current)
+  }
 
   const state: FormState = {
     mode,
@@ -115,24 +126,17 @@ export function Form(props: FormProps) {
     response: data.response,
     isCreateMode,
     isUpdateMode,
-    running,
-    isLoading,
-    isReading,
-    isCreating,
-    isUpdating,
-    isDeleting,
+    ...getRunningState(running),
   }
   const stateRef = useRef(state)
   stateRef.current = state
 
-  /*
-   * The rendered state with the latest form data, for handlers that run after an `await`: by then
-   * the rendered state is one render behind.
-   */
+  /** The rendered state with the latest form data and flags, for callbacks that run before a render. */
   const getState = (): FormState => {
     const current = dataRef.current
     return {
       ...stateRef.current,
+      ...getRunningState(runningRef.current),
       values: current.values,
       initialValues: current.initialValues,
       dirtyValues: getDirtyValues(current.dirty, current.values),
@@ -188,9 +192,7 @@ export function Form(props: FormProps) {
 
   const runOperation = (key: string) => {
     const operation = getOperation(key)
-    _setRunning((current) => {
-      return { ...current, [key]: true }
-    })
+    setRunning(key, true)
     setError(null)
     return validate(operation)
       .then(() => operation.handler(getState()))
@@ -206,14 +208,12 @@ export function Form(props: FormProps) {
         return onError({ error, operation })
       })
       .finally(() => {
-        _setRunning((current) => {
-          return { ...current, [key]: false }
-        })
+        setRunning(key, false)
       })
   }
 
   const isRunning = (key: string) => {
-    return Boolean(running[key])
+    return Boolean(runningRef.current[key])
   }
 
   const setFieldValue = (name: string, value: unknown) => {
