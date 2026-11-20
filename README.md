@@ -142,7 +142,7 @@ There is no global setup. The options are required props of `Form`. To share the
 Every slot and render prop gets `{ context }`. `useFormContext()` returns the same object.
 
 - State: `mode`, `itemId`, `fields`, `values`, `initialValues`, `dirtyValues`, `touched`, `dirty`, `error`, `fieldErrors`, `response`, `operations`, `isCreateMode`, `isUpdateMode`, `isLoading` and one flag per action
-- Actions: `runOperation(key)` (`'create'`, `'read'`, `'update'`, `'delete'` or a custom key), `isRunning(key)`, `setValue(name, value)`, `setFieldError(name, message)`, `setFieldErrors(errors)`, `clearErrors`, `resetForm`, `refresh`
+- Actions: `runOperation(key)` (`'create'`, `'read'`, `'update'`, `'delete'` or a custom key), `isRunning(key)`, `setValue(name, value)`, `setFieldError(name, message)`, `setFieldErrors(errors)` (replaces all field errors), `clearErrors`, `resetForm`, `refresh`
 
 Actions never throw: a failed request is stored in `error` and `fieldErrors`.
 

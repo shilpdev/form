@@ -69,5 +69,5 @@ The flag is turned off after step 3 or 4.
 ## Editing
 
 - `setValue(name, value)` sets the value, adds `name` to `touched`, adds or removes it from `dirty` by deep comparison with `initialValues`, and clears that field's error.
-- `setFieldError`, `setFieldErrors` and `clearErrors` change `fieldErrors` (and `clearErrors` also `error`) without a request.
+- `setFieldError` changes one field's error, `setFieldErrors(errors)` replaces all of them with `errors`, and `clearErrors` empties them. They change `fieldErrors` (and `clearErrors` also `error`) without a request.
 - `resetForm()` goes back to the field defaults in create mode and to `initialValues` in update mode, and clears the errors.

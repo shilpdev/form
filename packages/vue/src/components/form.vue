@@ -19,14 +19,11 @@ import type {
 import { getDuplicateOperationKeyMessage } from '@shared/messages'
 import {
   addTouched,
-  cloneValues,
   getDefaultValues,
   getDirtyValues,
   getOperations,
   mergeWithDefaults,
   resolveSchema,
-  setFieldErrorIn,
-  setFieldErrorsIn,
   toggleDirty,
 } from '@shared/utils'
 import { computed, provide, reactive, ref, toRaw, toRefs, watch } from 'vue'
@@ -132,7 +129,7 @@ const getState = (): FormState => {
 function loadValues(newValues: Values | undefined) {
   const merged = mergeWithDefaults(fields.value, newValues)
   values.value = merged
-  initialValues.value = cloneValues(merged)
+  initialValues.value = structuredClone(merged)
   touched.value = []
   dirty.value = []
 }
@@ -140,9 +137,9 @@ function loadValues(newValues: Values | undefined) {
 function setError(newError: OperationError | null) {
   error.value = newError
   if (newError) {
-    fieldErrors.value = { ...newError.fieldErrors }
+    setFieldErrors(newError.fieldErrors)
   } else {
-    fieldErrors.value = {}
+    setFieldErrors({})
   }
 }
 
@@ -203,15 +200,21 @@ function setValue(name: string, value: unknown) {
   values.value = { ...values.value, [name]: value }
   touched.value = addTouched(touched.value, name)
   dirty.value = toggleDirty(dirty.value, name, value, initialValues.value)
-  fieldErrors.value = setFieldErrorIn(fieldErrors.value, name, null)
+  setFieldError(name, null)
 }
 
 function setFieldError(name: string, message: string | null) {
-  fieldErrors.value = setFieldErrorIn(fieldErrors.value, name, message)
+  const nextFieldErrors = { ...fieldErrors.value }
+  if (message) {
+    nextFieldErrors[name] = message
+  } else {
+    delete nextFieldErrors[name]
+  }
+  fieldErrors.value = nextFieldErrors
 }
 
 function setFieldErrors(errors: FieldErrors) {
-  fieldErrors.value = setFieldErrorsIn(fieldErrors.value, errors)
+  fieldErrors.value = { ...errors }
 }
 
 function clearErrors() {
@@ -223,7 +226,7 @@ function resetForm() {
   if (isUpdateMode.value) {
     source = toRaw(initialValues.value)
   }
-  loadValues(cloneValues(source))
+  loadValues(structuredClone(source))
   setError(null)
 }
 

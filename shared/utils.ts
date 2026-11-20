@@ -85,7 +85,7 @@ export const toggleDirty = (
   return dirty
 }
 
-export const setFieldErrorIn = (
+export const generateFieldErrors = (
   errors: FieldErrors,
   name: string,
   message: string | null | undefined,
@@ -97,17 +97,6 @@ export const setFieldErrorIn = (
     next[name] = message
   }
   return next
-}
-
-export const setFieldErrorsIn = (errors: FieldErrors, updates: FieldErrors): FieldErrors => {
-  return Object.keys(updates).reduce((acc, name) => {
-    return setFieldErrorIn(acc, name, updates[name])
-  }, errors)
-}
-
-// A copy, so editing the form never changes `initialValues`.
-export const cloneValues = (values: Values): Values => {
-  return structuredClone(values)
 }
 
 /*

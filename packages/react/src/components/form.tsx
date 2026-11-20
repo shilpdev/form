@@ -11,14 +11,12 @@ import type {
 import { getDuplicateOperationKeyMessage } from '@shared/messages'
 import {
   addTouched,
-  cloneValues,
   getDefaultValues,
   getDirtyValues,
   getOperations,
   mergeWithDefaults,
   resolveSchema,
-  setFieldErrorIn,
-  setFieldErrorsIn,
+  generateFieldErrors,
   toggleDirty,
 } from '@shared/utils'
 import { useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
@@ -139,14 +137,15 @@ export function Form(props: FormProps) {
 
   const loadValues = (values: Values | undefined): Partial<FormData> => {
     const merged = mergeWithDefaults(fields, values)
-    return { values: merged, initialValues: cloneValues(merged), touched: [], dirty: [] }
+    return { values: merged, initialValues: structuredClone(merged), touched: [], dirty: [] }
   }
 
   const setError = (error: OperationError | null) => {
+    commit({ error })
     if (error) {
-      commit({ error, fieldErrors: { ...error.fieldErrors } })
+      setFieldErrors(error.fieldErrors)
     } else {
-      commit({ error: null, fieldErrors: {} })
+      setFieldErrors({})
     }
   }
 
@@ -214,16 +213,16 @@ export function Form(props: FormProps) {
       values: { ...current.values, [name]: value },
       touched: addTouched(current.touched, name),
       dirty: toggleDirty(current.dirty, name, value, current.initialValues),
-      fieldErrors: setFieldErrorIn(current.fieldErrors, name, null),
     })
+    setFieldError(name, null)
   }
 
   const setFieldError = (name: string, message: string | null) => {
-    commit({ fieldErrors: setFieldErrorIn(dataRef.current.fieldErrors, name, message) })
+    commit({ fieldErrors: generateFieldErrors(dataRef.current.fieldErrors, name, message) })
   }
 
   const setFieldErrors = (errors: FieldErrors) => {
-    commit({ fieldErrors: setFieldErrorsIn(dataRef.current.fieldErrors, errors) })
+    commit({ fieldErrors: { ...errors } })
   }
 
   const clearErrors = () => {
@@ -236,7 +235,7 @@ export function Form(props: FormProps) {
     if (isUpdateMode) {
       values = current.initialValues
     }
-    commit({ ...loadValues(cloneValues(values)), error: null, fieldErrors: {} })
+    commit({ ...loadValues(structuredClone(values)), error: null, fieldErrors: {} })
   }
 
   const init = () => {

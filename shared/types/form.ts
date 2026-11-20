@@ -49,6 +49,7 @@ export interface FormActions {
   /** Sets one value, marks the field touched, updates `dirty` and clears that field's error. */
   setValue: (name: string, value: unknown) => void
   setFieldError: (name: string, message: string | null) => void
+  /** Replaces all field errors with `errors`; the old ones are dropped. */
   setFieldErrors: (errors: FieldErrors) => void
   clearErrors: () => void
   /** Back to the field defaults (create mode) or the last loaded values (update mode). */
