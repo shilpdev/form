@@ -1,4 +1,4 @@
-import { DELETE_MESSAGE, DELETING_MESSAGE, LOADING_MESSAGE } from '@shared/messages'
+import { DELETE_MESSAGE, DELETING_MESSAGE } from '@shared/constants/messages'
 import { useFormContext } from '../context/form-context'
 import type { FormActionProps } from '../types'
 import { Slot } from './slot'
@@ -17,8 +17,6 @@ export const FormDelete = ({ children }: FormActionProps) => {
   let label = DELETE_MESSAGE
   if (context.isDeleting) {
     label = DELETING_MESSAGE
-  } else if (context.isReading) {
-    label = LOADING_MESSAGE
   }
 
   return (

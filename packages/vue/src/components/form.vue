@@ -16,13 +16,14 @@ import type {
   OperationItem,
   Values,
 } from '@shared'
-import { getDuplicateOperationKeyMessage } from '@shared/messages'
+import { getDuplicateOperationKeyMessage } from '@shared/constants/messages'
 import {
   addTouched,
   getDefaultValues,
   getDirtyValues,
   getOperations,
   mergeWithDefaults,
+  generateFieldErrors,
   resolveSchema,
   toggleDirty,
 } from '@shared/utils'
@@ -88,7 +89,9 @@ const dirtyValues = computed(() => {
   return getDirtyValues(dirty.value, values.value)
 })
 
-/** The state keys of the context, defined once. The context spreads it, `getState` snapshots it. */
+/*
+ * The state keys of the context, defined once. The context spreads it, `getState` snapshots it.
+ */
 const state: FormState = reactive({
   itemId: computed(() => {
     return props.itemId
@@ -107,6 +110,7 @@ const state: FormState = reactive({
   response,
   isCreateMode,
   isUpdateMode,
+  running,
   isLoading,
   isReading,
   isCreating,
@@ -114,7 +118,10 @@ const state: FormState = reactive({
   isDeleting,
 })
 
-/** A plain snapshot (no methods, no proxies) for the handlers, `schemaValidator` and the callbacks. */
+/*
+ * A plain snapshot (no methods, no proxies) for the handlers, `schemaValidator` and the
+ * callbacks.
+ */
 const getState = (): FormState => {
   return {
     ...state,
@@ -196,7 +203,7 @@ function isRunning(key: string) {
   return Boolean(running.value[key])
 }
 
-function setValue(name: string, value: unknown) {
+function setFieldValue(name: string, value: unknown) {
   values.value = { ...values.value, [name]: value }
   touched.value = addTouched(touched.value, name)
   dirty.value = toggleDirty(dirty.value, name, value, initialValues.value)
@@ -204,24 +211,18 @@ function setValue(name: string, value: unknown) {
 }
 
 function setFieldError(name: string, message: string | null) {
-  const nextFieldErrors = { ...fieldErrors.value }
-  if (message) {
-    nextFieldErrors[name] = message
-  } else {
-    delete nextFieldErrors[name]
-  }
-  fieldErrors.value = nextFieldErrors
+  fieldErrors.value = generateFieldErrors(fieldErrors.value, { [name]: message })
 }
 
 function setFieldErrors(errors: FieldErrors) {
-  fieldErrors.value = { ...errors }
+  fieldErrors.value = generateFieldErrors({}, errors)
 }
 
 function clearErrors() {
   setError(null)
 }
 
-function resetForm() {
+function reset() {
   let source = getDefaultValues(fields.value)
   if (isUpdateMode.value) {
     source = toRaw(initialValues.value)
@@ -233,14 +234,14 @@ function resetForm() {
 function init() {
   if (isUpdateMode.value) {
     runOperation('read')
-    return
+  } else {
+    loadValues(getDefaultValues(fields.value))
   }
-  response.value = null
-  setError(null)
-  loadValues(getDefaultValues(fields.value))
 }
 
 function refresh() {
+  response.value = null
+  setError(null)
   init()
 }
 
@@ -248,19 +249,20 @@ const context: FormContext = reactive({
   ...toRefs(state),
   runOperation,
   isRunning,
-  setValue,
+  setFieldValue,
   setFieldError,
   setFieldErrors,
   clearErrors,
-  resetForm,
+  reset,
   refresh,
 })
 
-provide('shilp-form-context', context)
+provide('shilp-form', context)
 
 watch(() => {
   return props.itemId
 }, init)
+
 init()
 
 defineExpose(toRefs(context))

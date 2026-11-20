@@ -1,4 +1,4 @@
-import { CREATE_MESSAGE, CREATING_MESSAGE } from '@shared/messages'
+import { CREATE_MESSAGE, CREATING_MESSAGE } from '@shared/constants/messages'
 import { useFormContext } from '../context/form-context'
 import type { FormActionProps } from '../types'
 import { Slot } from './slot'

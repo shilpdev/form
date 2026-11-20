@@ -14,6 +14,7 @@ import {
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { AppForm } from '@/components/app-form'
+import { UserField } from './components/user-field'
 import { createUser, deleteUser, readUser, updateUser } from '@/lib/users-api'
 import { ROLES, userSchema } from '@/lib/user-schema'
 
@@ -51,7 +52,7 @@ export default function UserPage() {
     schema: userSchema,
     onError,
     onSuccess: (state) => {
-      router.push(`/users/${state.response?.id}`)
+      router.push(`/users/${state.response!.id}`)
     },
     handler: async (state): Promise<OperationResponse> => {
       const { id, name, email, role } = await createUser(state.values)
@@ -105,34 +106,25 @@ export default function UserPage() {
                   <FormField name="name">
                     {({ label, error, inputProps }) => {
                       return (
-                        <label className="flex flex-col gap-1">
-                          <span className="text-sm font-medium">{label}</span>
+                        <UserField label={label} error={error}>
                           <input {...inputProps} className={INPUT_CLASS} />
-                          {error && (
-                            <span className="text-sm text-red-600 dark:text-red-400">{error}</span>
-                          )}
-                        </label>
+                        </UserField>
                       )
                     }}
                   </FormField>
                   <FormField name="email">
                     {({ label, error, inputProps }) => {
                       return (
-                        <label className="flex flex-col gap-1">
-                          <span className="text-sm font-medium">{label}</span>
+                        <UserField label={label} error={error}>
                           <input type="email" {...inputProps} className={INPUT_CLASS} />
-                          {error && (
-                            <span className="text-sm text-red-600 dark:text-red-400">{error}</span>
-                          )}
-                        </label>
+                        </UserField>
                       )
                     }}
                   </FormField>
                   <FormField name="role">
                     {({ label, error, inputProps }) => {
                       return (
-                        <label className="flex flex-col gap-1">
-                          <span className="text-sm font-medium">{label}</span>
+                        <UserField label={label} error={error}>
                           <select {...inputProps} className={INPUT_CLASS}>
                             <option value="">Select a role</option>
                             {ROLES.map((role) => {
@@ -143,10 +135,7 @@ export default function UserPage() {
                               )
                             })}
                           </select>
-                          {error && (
-                            <span className="text-sm text-red-600 dark:text-red-400">{error}</span>
-                          )}
-                        </label>
+                        </UserField>
                       )
                     }}
                   </FormField>

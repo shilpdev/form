@@ -48,7 +48,10 @@ export const getDefaultValues = (fields: Field[]): Values => {
   }, {})
 }
 
-// Every field gets a key, even when the loaded item has no value for it.
+/*
+ * Every field gets a key, even when the loaded item has no value for it.
+ * Example: fields `name`, `email` and loaded `{ name: 'A' }` -> `{ name: 'A', email: null }`
+ */
 export const mergeWithDefaults = (fields: Field[], values: Values | null | undefined): Values => {
   return { ...getDefaultValues(fields), ...(values ?? {}) }
 }
@@ -85,17 +88,23 @@ export const toggleDirty = (
   return dirty
 }
 
+/*
+ * A new `fieldErrors` object: `errors` with `updates` applied. An update with an empty message
+ * removes that field's error. With no arguments it is an empty object.
+ * Example: `({ email: 'Taken' }, { email: null, name: 'Required' })` -> `{ name: 'Required' }`
+ */
 export const generateFieldErrors = (
-  errors: FieldErrors,
-  name: string,
-  message: string | null | undefined,
+  errors: FieldErrors = {},
+  updates: Record<string, string | null | undefined> = {},
 ): FieldErrors => {
   const next = { ...errors }
-  if (message == null || message === '') {
-    delete next[name]
-  } else {
-    next[name] = message
-  }
+  Object.entries(updates).forEach(([name, message]) => {
+    if (message) {
+      next[name] = message
+    } else {
+      delete next[name]
+    }
+  })
   return next
 }
 

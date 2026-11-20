@@ -21,16 +21,16 @@ Treat the code and the `shared/` types as the source of truth for the current AP
 ## Layout
 
 - `packages/react`, `packages/vue`: the published libraries (Vite lib mode, output to `dist/`).
-- `shared/`: code both libraries use. `shared/types/` holds the TypeScript types (`FormState`, `FormContext`, `FormPropsBase`, `FieldScope`, ...). `shared/messages.ts` holds every message the packages show or throw (static text as `*_MESSAGE` constants, text built from values as `get*Message` functions). `shared/utils.ts` holds the framework-agnostic logic (`resolveSchema`, dirty and touched helpers, `getInputValue`). Not a workspace package: both libraries import types from `@shared`, and logic from `@shared/utils` (the `@shared` alias is set in each package's `vite.config.ts` and `tsconfig.json`). `shared/` resolves npm packages from the repo root, so a package it imports (such as `fast-deep-equal`) must be a root dependency.
+- `shared/`: code both libraries use. `shared/types/` holds the TypeScript types (`FormState`, `FormContext`, `FormPropsBase`, `FieldScope`, ...). `shared/constants/messages.ts` holds every message the packages show or throw (static text as `*_MESSAGE` constants, text built from values as `get*Message` functions). `shared/utils.ts` holds the framework-agnostic logic (`resolveSchema`, dirty and touched helpers, `getInputValue`). Not a workspace package: both libraries import types from `@shared`, and logic from `@shared/utils` (the `@shared` alias is set in each package's `vite.config.ts` and `tsconfig.json`). `shared/` resolves npm packages from the repo root, so a package it imports (such as `fast-deep-equal`) must be a root dependency.
 - `apps/next-demo`, `apps/nuxt-demo`: demo apps for manual testing against the packages, with an in-memory users API and Zod adapters. There are no automated tests.
 
 ## Architecture
 
-The root component (`Form` in `packages/react/src/components/form.tsx`, `form.vue` in Vue) owns all state and exposes it with the actions through a context (`useFormContext` in both packages). Slot components (`FormFields`, `FormField`, `FormFieldError`, the three action buttons and `FormError`) read that context and throw if used outside the root. Every slot scope has a `context` key; handlers and `schemaValidator` get only the `FormState` (data, no methods). `FormField` adds the values it computes for one field.
+The root component (`Form` in `packages/react/src/components/form.tsx`, `form.vue` in Vue) owns all state and exposes it with the actions through a context (`useFormContext` in React, `inject` in Vue). Slot components (`FormFields`, `FormField`, `FormFieldError`, the operation buttons and `FormError`) read that context; React throws if one is used outside the root, Vue does not check. Every slot scope has a `context` key; handlers and `schemaValidator` get only the `FormState` (data, no methods). `FormField` adds the values it computes for one field.
 
 Operations are one flat list: `getOperations` (in `shared/utils.ts`) maps `create`, `read`, `update` and `delete` to `{ key, ...config }` and appends the custom `operations`. One executor, `runOperation(key)`, runs any of them as one promise chain (`.then((response) => { store it, run onSuccess }).catch((error) => onError({ error, operation })).finally(...)`): flag on, clear the error, validate (only when the operation has a `schema`), call the handler, store the response, run `onError`, flag off. The action buttons call it with their key (`runOperation('create')`). Errors are stored, never thrown.
 
-React keeps the user-edited data (`values`, `initialValues`, `touched`, `dirty`, `fieldErrors`, `error`, `response`) in one `dataRef` that is updated synchronously and mirrored into state for rendering, so an action called in the same event as `setValue` sends the new value. Vue uses one `ref` each and a `reactive` context. Options (`modeDetector`, `fieldsGenerator`, `schemaValidator`) are required props of `Form`: there are no defaults.
+React keeps the user-edited data (`values`, `initialValues`, `touched`, `dirty`, `fieldErrors`, `error`, `response`) in one `dataRef` that is updated synchronously and mirrored into state for rendering, so an action called in the same event as `setFieldValue` sends the new value. Vue uses one `ref` each and a `reactive` context. Options (`modeDetector`, `fieldsGenerator`, `schemaValidator`) are required props of `Form`: there are no defaults.
 
 ## Engineering rules
 
@@ -38,7 +38,7 @@ The rules of `shilpdev/list` apply here unchanged. The ones that matter most:
 
 - Parity: both packages have the same API, props, state keys, defaults, default markup and default text. When you change one, change the other in the same task. Record a known difference in `PARITY.md`.
 - Anything that is the same in both frameworks lives once in `shared/`. The framework layer only adapts reactivity, lifecycle, rendering and event wiring.
-- User-visible text lives in `shared/messages.ts`.
+- User-visible text lives in `shared/constants/messages.ts`.
 - Define a type once; keep framework-specific types (`InputProps`, `VueFieldScope`) in their package.
 - Booleans start with `is` or `has`. Props types end in `Props`, slot scopes in `Scope`. Internal React setters take a `_` prefix.
 - File names have no prefix; an exported component is `Form` plus the PascalCase file name (`field-error.tsx` exports `FormFieldError`).

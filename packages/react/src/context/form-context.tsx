@@ -1,6 +1,6 @@
 import { createContext, useContext, type ReactNode } from 'react'
 import type { FormContext } from '@shared'
-import { CONTEXT_OUTSIDE_FORM_MESSAGE } from '@shared/messages'
+import { CONTEXT_OUTSIDE_FORM_MESSAGE } from '@shared/constants/messages'
 
 const FormContextValue = createContext<FormContext | null>(null)
 

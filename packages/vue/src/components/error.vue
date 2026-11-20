@@ -7,12 +7,13 @@
 </template>
 
 <script setup lang="ts">
-import { getErrorMessage } from '@shared/messages'
-import { useFormContext } from '../composables/use-form-context'
+import type { FormContext } from '@shared'
+import { getErrorMessage } from '@shared/constants/messages'
+import { inject } from 'vue'
 
 defineOptions({
   name: 'FormError',
 })
 
-const context = useFormContext()
+const context = inject<FormContext>('shilp-form')!
 </script>

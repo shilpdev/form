@@ -5,7 +5,10 @@ import type { ZodObject } from 'zod'
 
 type AppFormProps = Pick<FormProps, 'itemId' | 'read' | 'create' | 'update' | 'delete' | 'children'>
 
-// `+` in the URL is the "new user" id, so it means create mode like a missing id.
+/*
+ * `+` in the URL is the "new user" id, so it means create mode like a missing id.
+ * Example: /users/+ -> create, /users/12 -> update
+ */
 const modeDetector = ({ itemId }: { itemId?: string | number }): FormMode => {
   if (itemId === undefined || itemId === '' || itemId === '+') {
     return 'create'

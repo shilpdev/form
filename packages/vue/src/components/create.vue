@@ -9,15 +9,15 @@
 </template>
 
 <script setup lang="ts">
-import { CREATE_MESSAGE, CREATING_MESSAGE } from '@shared/messages'
-import { computed } from 'vue'
-import { useFormContext } from '../composables/use-form-context'
+import type { FormContext } from '@shared'
+import { CREATE_MESSAGE, CREATING_MESSAGE } from '@shared/constants/messages'
+import { computed, inject } from 'vue'
 
 defineOptions({
   name: 'FormCreate',
 })
 
-const context = useFormContext()
+const context = inject<FormContext>('shilp-form')!
 
 function run() {
   return context.runOperation('create')

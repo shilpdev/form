@@ -1,4 +1,4 @@
-import { LOADING_MESSAGE, UPDATE_MESSAGE, UPDATING_MESSAGE } from '@shared/messages'
+import { LOADING_MESSAGE, UPDATE_MESSAGE, UPDATING_MESSAGE } from '@shared/constants/messages'
 import { useFormContext } from '../context/form-context'
 import type { FormActionProps } from '../types'
 import { Slot } from './slot'

@@ -1,4 +1,4 @@
-import { getErrorMessage } from '@shared/messages'
+import { getErrorMessage } from '@shared/constants/messages'
 import { useFormContext } from '../context/form-context'
 import type { FormPartProps } from '../types'
 import { Slot } from './slot'

@@ -9,6 +9,12 @@ Each row is a place where `packages/react` behaves or is shaped differently from
 | Low | React StrictMode | Setup runs in an effect, so in development `read` is called twice on mount | Runs once |
 | Low | Field list identity | Fields are memoized on the schema object, so an inline `fieldsGenerator` prop that changes is picked up only when the schema changes | Recomputed whenever the schema or the options change |
 
+## Context access
+
+| Priority | Difference | React | Vue |
+| -------- | ---------- | ----- | --- |
+| Medium | Reading the context outside a slot | `useFormContext()` is exported and throws when used outside `Form` | No composable is exported; read `context` from the slot scope. The slot components inject it directly and do not check that a `Form` exists |
+
 ## Slot components
 
 No differences. Every pair has the same props, show condition, default markup and text, and `shilp-form__*` class.

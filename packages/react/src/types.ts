@@ -31,7 +31,9 @@ export interface FormFieldProps extends FieldPropsBase {
   children?: Children<ReactFieldScope>
 }
 
-export interface FormFieldErrorProps extends FieldPropsBase {
+export interface FormFieldErrorProps {
+  /** Shows this field's error instead of the surrounding `FormField`'s. */
+  name?: string
   children?: Children<FormFieldErrorScope>
 }
 

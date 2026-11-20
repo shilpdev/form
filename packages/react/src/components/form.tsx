@@ -8,7 +8,7 @@ import type {
   OperationItem,
   Values,
 } from '@shared'
-import { getDuplicateOperationKeyMessage } from '@shared/messages'
+import { getDuplicateOperationKeyMessage } from '@shared/constants/messages'
 import {
   addTouched,
   getDefaultValues,
@@ -24,7 +24,9 @@ import { FormContextProvider } from '../context/form-context'
 import type { FormProps } from '../types'
 import { Slot } from './slot'
 
-/** Everything the user edits plus what the last response set. Changed together, so kept together. */
+/*
+ * Everything the user edits plus what the last response set. Changed together, so kept together.
+ */
 interface FormData {
   values: Values
   initialValues: Values
@@ -72,14 +74,17 @@ export function Form(props: FormProps) {
     operations: customOperations,
   })
 
-  // Memoized on the schema so an inline `fieldsGenerator` does not rebuild the fields every render.
+  /*
+   * Memoized on the schema so an inline `fieldsGenerator` does not rebuild the fields every
+   * render.
+   */
   const fields = useMemo(() => {
     return fieldsGenerator({ schema: targetSchema })
   }, [targetSchema])
 
   /*
    * `dataRef` is the source of truth and is updated synchronously, so an action called in the same
-   * event as `setValue` sends the new value. `_setData` only triggers the render.
+   * event as `setFieldValue` sends the new value. `_setData` only triggers the render.
    */
   const dataRef = useRef<FormData>(EMPTY_DATA)
   const [data, _setData] = useState<FormData>(EMPTY_DATA)
@@ -110,6 +115,7 @@ export function Form(props: FormProps) {
     response: data.response,
     isCreateMode,
     isUpdateMode,
+    running,
     isLoading,
     isReading,
     isCreating,
@@ -119,7 +125,10 @@ export function Form(props: FormProps) {
   const stateRef = useRef(state)
   stateRef.current = state
 
-  /** The rendered state with the latest form data, for handlers that run after an `await`. */
+  /*
+   * The rendered state with the latest form data, for handlers that run after an `await`: by then
+   * the rendered state is one render behind.
+   */
   const getState = (): FormState => {
     const current = dataRef.current
     return {
@@ -207,7 +216,7 @@ export function Form(props: FormProps) {
     return Boolean(running[key])
   }
 
-  const setValue = (name: string, value: unknown) => {
+  const setFieldValue = (name: string, value: unknown) => {
     const current = dataRef.current
     commit({
       values: { ...current.values, [name]: value },
@@ -218,35 +227,41 @@ export function Form(props: FormProps) {
   }
 
   const setFieldError = (name: string, message: string | null) => {
-    commit({ fieldErrors: generateFieldErrors(dataRef.current.fieldErrors, name, message) })
+    commit({ fieldErrors: generateFieldErrors(dataRef.current.fieldErrors, { [name]: message }) })
   }
 
   const setFieldErrors = (errors: FieldErrors) => {
-    commit({ fieldErrors: { ...errors } })
+    commit({ fieldErrors: generateFieldErrors({}, errors) })
   }
 
   const clearErrors = () => {
-    commit({ error: null, fieldErrors: {} })
+    commit({ error: null, fieldErrors: generateFieldErrors() })
   }
 
-  const resetForm = () => {
+  const reset = () => {
     const current = dataRef.current
     let values = getDefaultValues(fields)
     if (isUpdateMode) {
       values = current.initialValues
     }
-    commit({ ...loadValues(structuredClone(values)), error: null, fieldErrors: {} })
+    commit({
+      ...loadValues(structuredClone(values)),
+      error: null,
+      fieldErrors: generateFieldErrors(),
+    })
   }
 
   const init = () => {
     if (isUpdateMode) {
       runOperation('read')
-      return
+    } else {
+      commit(loadValues(getDefaultValues(fields)))
     }
-    commit({ ...EMPTY_DATA, ...loadValues(getDefaultValues(fields)) })
   }
 
   const refresh = () => {
+    commit({ response: null })
+    setError(null)
     init()
   }
 
@@ -261,11 +276,11 @@ export function Form(props: FormProps) {
     ...state,
     runOperation,
     isRunning,
-    setValue,
+    setFieldValue,
     setFieldError,
     setFieldErrors,
     clearErrors,
-    resetForm,
+    reset,
     refresh,
   }
 

@@ -9,15 +9,15 @@
 </template>
 
 <script setup lang="ts">
-import { DELETE_MESSAGE, DELETING_MESSAGE, LOADING_MESSAGE } from '@shared/messages'
-import { computed } from 'vue'
-import { useFormContext } from '../composables/use-form-context'
+import type { FormContext } from '@shared'
+import { DELETE_MESSAGE, DELETING_MESSAGE } from '@shared/constants/messages'
+import { computed, inject } from 'vue'
 
 defineOptions({
   name: 'FormDelete',
 })
 
-const context = useFormContext()
+const context = inject<FormContext>('shilp-form')!
 
 function run() {
   return context.runOperation('delete')
@@ -26,9 +26,6 @@ function run() {
 const label = computed(() => {
   if (context.isDeleting) {
     return DELETING_MESSAGE
-  }
-  if (context.isReading) {
-    return LOADING_MESSAGE
   }
   return DELETE_MESSAGE
 })

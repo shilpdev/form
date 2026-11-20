@@ -32,24 +32,24 @@
               <FormFields>
                 <div class="flex flex-col gap-4">
                   <FormField v-slot="{ label, error, model }" name="name">
-                    <UFormField :label="label" :error="error ?? false">
+                    <UserField :label="label" :error="error">
                       <UInput v-bind="model" class="w-full" />
-                    </UFormField>
+                    </UserField>
                   </FormField>
                   <FormField v-slot="{ label, error, model }" name="email">
-                    <UFormField :label="label" :error="error ?? false">
+                    <UserField :label="label" :error="error">
                       <UInput v-bind="model" type="email" class="w-full" />
-                    </UFormField>
+                    </UserField>
                   </FormField>
                   <FormField v-slot="{ label, error, model }" name="role">
-                    <UFormField :label="label" :error="error ?? false">
+                    <UserField :label="label" :error="error">
                       <USelect
                         v-bind="model"
                         :items="ROLES"
                         placeholder="Select a role"
                         class="w-full"
                       />
-                    </UFormField>
+                    </UserField>
                   </FormField>
                 </div>
               </FormFields>
@@ -148,7 +148,7 @@ const createOperation: OperationConfig = {
   schema: userSchema,
   onError,
   onSuccess: (state) => {
-    navigateTo(`/users/${state.response?.id}`)
+    navigateTo(`/users/${state.response!.id}`)
   },
   handler: async (state): Promise<OperationResponse> => {
     const { id, name, email, role } = await createUser(state.values)

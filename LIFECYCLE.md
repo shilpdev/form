@@ -38,8 +38,8 @@ sequenceDiagram
 - The options (`modeDetector`, `fieldsGenerator`, `schemaValidator`) are required props of `Form`; there are no defaults.
 - `modeDetector({ itemId })` sets the mode. It is a required prop and has no default.
 - The schema in use is `create.schema` in create mode and `update.schema` in update mode. `fieldsGenerator` turns it into fields (`{ name, label, value? }`).
-- Update mode: `runOperation('read')` runs (step 2 without validation). Create mode: `values` are the field defaults (`field.value`, or `null`), and `error` and `response` are cleared.
-- Setup runs again whenever `itemId` changes, and on `refresh()`. In React it runs in an effect, so React StrictMode reads twice in development.
+- Update mode: `runOperation('read')` runs (step 2 without validation). Create mode: `values` are the field defaults (`field.value`, or `null`), and `touched` and `dirty` are emptied.
+- Setup runs again whenever `itemId` changes, and on `refresh()`. Only `refresh()` first clears `response` and `error`; setup itself leaves them as they are. In React it runs in an effect, so React StrictMode reads twice in development.
 
 ### 2. Action
 
@@ -68,6 +68,6 @@ The flag is turned off after step 3 or 4.
 
 ## Editing
 
-- `setValue(name, value)` sets the value, adds `name` to `touched`, adds or removes it from `dirty` by deep comparison with `initialValues`, and clears that field's error.
+- `setFieldValue(name, value)` sets the value, adds `name` to `touched`, adds or removes it from `dirty` by deep comparison with `initialValues`, and clears that field's error.
 - `setFieldError` changes one field's error, `setFieldErrors(errors)` replaces all of them with `errors`, and `clearErrors` empties them. They change `fieldErrors` (and `clearErrors` also `error`) without a request.
-- `resetForm()` goes back to the field defaults in create mode and to `initialValues` in update mode, and clears the errors.
+- `reset()` goes back to the field defaults in create mode and to `initialValues` in update mode, and clears the errors.

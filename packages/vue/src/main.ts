@@ -7,7 +7,6 @@ export { default as FormUpdate } from './components/update.vue'
 export { default as FormDelete } from './components/delete.vue'
 export { default as FormOperation } from './components/operation.vue'
 export { default as FormError } from './components/error.vue'
-export { useFormContext } from './composables/use-form-context'
 
 export type { FormPropsBase as FormProps } from '@shared'
 export type { VueFieldScope } from './types'

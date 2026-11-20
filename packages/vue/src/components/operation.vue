@@ -9,8 +9,8 @@
 </template>
 
 <script setup lang="ts">
-import type { OperationPropsBase } from '@shared'
-import { useFormContext } from '../composables/use-form-context'
+import type { FormContext, OperationPropsBase } from '@shared'
+import { inject } from 'vue'
 
 defineOptions({
   name: 'FormOperation',
@@ -18,7 +18,7 @@ defineOptions({
 
 const props = defineProps<OperationPropsBase>()
 
-const context = useFormContext()
+const context = inject<FormContext>('shilp-form')!
 
 function run() {
   return context.runOperation(props.operation)

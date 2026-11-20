@@ -10,6 +10,7 @@ export const UPDATING_MESSAGE = 'Updating...'
 export const DELETE_MESSAGE = 'Delete'
 export const DELETING_MESSAGE = 'Deleting...'
 export const CONTEXT_OUTSIDE_FORM_MESSAGE = 'useFormContext must be used within a Form'
+export const FIELD_CONTEXT_OUTSIDE_FIELD_MESSAGE = 'FormFieldError must be used within a FormField or be given a name'
 
 export const getErrorMessage = (error: { name: string; message: string }): string => {
   return `${error.name}: ${error.message}`

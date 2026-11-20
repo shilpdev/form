@@ -139,10 +139,10 @@ There is no global setup. The options are required props of `Form`. To share the
 
 ### Context
 
-Every slot and render prop gets `{ context }`. `useFormContext()` returns the same object.
+Every slot and render prop gets `{ context }`. In React, `useFormContext()` returns the same object. Vue has no such composable: use the slot scope.
 
-- State: `mode`, `itemId`, `fields`, `values`, `initialValues`, `dirtyValues`, `touched`, `dirty`, `error`, `fieldErrors`, `response`, `operations`, `isCreateMode`, `isUpdateMode`, `isLoading` and one flag per action
-- Actions: `runOperation(key)` (`'create'`, `'read'`, `'update'`, `'delete'` or a custom key), `isRunning(key)`, `setValue(name, value)`, `setFieldError(name, message)`, `setFieldErrors(errors)` (replaces all field errors), `clearErrors`, `resetForm`, `refresh`
+- State: `mode`, `itemId`, `fields`, `values`, `initialValues`, `dirtyValues`, `touched`, `dirty`, `error`, `fieldErrors`, `response`, `operations`, `isCreateMode`, `isUpdateMode`, `running` (a `{ [key]: boolean }` record), `isLoading` and one flag per action
+- Actions: `runOperation(key)` (`'create'`, `'read'`, `'update'`, `'delete'` or a custom key), `isRunning(key)`, `setFieldValue(name, value)`, `setFieldError(name, message)`, `setFieldErrors(errors)` (replaces all field errors), `clearErrors`, `reset`, `refresh`
 
 Actions never throw: a failed request is stored in `error` and `fieldErrors`.
 
@@ -153,7 +153,7 @@ Actions never throw: a failed request is stored in `error` and `fieldErrors`.
 | `Form` | always | |
 | `FormFields` | always | |
 | `FormField name="..."` | the field is in the schema | `field`, `name`, `label`, `value`, `error`, `updateValue`, plus `inputProps` (React) or `model` and `nativeModel` (Vue) |
-| `FormFieldError name="..."` | the field has an error | `error` |
+| `FormFieldError name?="..."` | the field has an error. Inside a `FormField` it needs no `name`; with a `name` it shows that field's error | `error` |
 | `FormCreate` | create mode | `run` |
 | `FormUpdate` | update mode | `run` |
 | `FormDelete` | update mode, not reading | `run` |
@@ -167,7 +167,7 @@ CSS classes: `shilp-form`, `shilp-form__fields`, `shilp-form__field`, `shilp-for
 ```
 packages/react    @shilp.dev/react-form
 packages/vue      @shilp.dev/vue-form
-shared/           types, defaults, messages and logic used by both packages
+shared/           types, messages and logic used by both packages
 apps/next-demo    Next.js demo (port 3002)
 apps/nuxt-demo    Nuxt demo with Nuxt UI (port 3007)
 ```
