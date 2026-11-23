@@ -1,43 +1,39 @@
 import type {
   FieldScope,
   FormContext,
-  FormFieldPropsBase,
-  FormOptions,
+  FieldPropsBase,
   FormPropsBase,
   FormScope,
+  OperationPropsBase,
+  OperationScope,
 } from '@shared'
 import type { ChangeEvent, ReactNode, Ref } from 'react'
 
 type Children<Scope> = ReactNode | ((scope: Scope) => ReactNode)
 
-export interface FormProps<Schema = unknown> extends FormPropsBase<Schema> {
-  children?: Children<FormScope<Schema>>
+export interface FormProps extends FormPropsBase {
+  children?: Children<FormScope>
   /** React 19 ref-as-prop; exposes the form context as an imperative API. */
-  ref?: Ref<FormContext<Schema>>
+  ref?: Ref<FormContext>
 }
 
-/** App-wide options. Each one can still be overridden by the same prop on a `Form`. */
-export interface FormProviderProps<Schema = unknown> extends Partial<FormOptions<Schema>> {
-  children?: ReactNode
-}
-
-/** Spread on a native input: `<input {...inputProps} />`. */
 export interface InputProps {
   name: string
   value: string | number | readonly string[]
   onChange: (event: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void
 }
 
-/** `FieldScope` plus the React-only `inputProps`. */
-export interface ReactFieldScope<Schema = unknown> extends FieldScope<Schema> {
+export interface ReactFieldScope extends FieldScope {
   inputProps: InputProps
 }
 
-export interface FormFieldProps extends FormFieldPropsBase {
+export interface FormFieldProps extends FieldPropsBase {
   children?: Children<ReactFieldScope>
 }
 
-export interface FormFieldErrorProps extends FormFieldPropsBase {
+export interface FormFieldErrorProps {
+  /** Shows this field's error instead of the surrounding `FormField`'s. */
+  name?: string
   children?: Children<FormFieldErrorScope>
 }
 
@@ -45,7 +41,15 @@ export interface FormFieldErrorScope extends FormScope {
   error: string
 }
 
-/** Props of `FormFields`, `FormError` and every action button. */
+export interface FormOperationProps extends OperationPropsBase {
+  children?: Children<OperationScope>
+}
+
+/** Props of `FormCreate`, `FormUpdate` and `FormDelete`. */
+export interface FormActionProps {
+  children?: Children<OperationScope>
+}
+
 export interface FormPartProps {
   children?: Children<FormScope>
 }

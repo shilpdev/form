@@ -1,40 +1,81 @@
 'use client'
 
 import {
-  Form,
-  FormArchive,
   FormCreate,
   FormDelete,
   FormError,
   FormField,
   FormFields,
-  FormUnarchive,
   FormUpdate,
-  type FormState,
+  type OperationConfig,
+  type OperationError,
+  type OperationResponse,
 } from '@shilp.dev/react-form'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import { createUser, deleteUser, readUser, setArchived, updateUser } from '@/lib/users-api'
+import { AppForm } from '@/components/app-form'
+import { UserField } from './components/user-field'
+import { createUser, deleteUser, readUser, updateUser } from '@/lib/users-api'
 import { ROLES, userSchema } from '@/lib/user-schema'
 
 const INPUT_CLASS = 'w-full rounded-md border border-accented bg-default px-3 py-2 text-highlighted'
 
+
+function onError(error: unknown): OperationError {
+  const { name, message, errors } = error as {
+    name?: string
+    message?: string
+    errors?: Record<string, string>
+  }
+  return {
+    name: name ?? 'Error',
+    message: message ?? 'Something went wrong. Please try again.',
+    fieldErrors: errors ?? {},
+  }
+}
+
 export default function UserPage() {
   const params = useParams<{ id: string }>()
   const router = useRouter()
-  // `+` in the URL is the "new user" id, which the default `resolveMode` treats as create mode.
+  // `+` in the URL is the "new user" id, which `modeDetector` in `AppForm` treats as create mode.
   const itemId = decodeURIComponent(params.id)
 
-  const create = async (state: FormState) => {
-    const response = await createUser(state.values)
-    router.push(`/users/${response.id}`)
-    return response
+  const readOperation: OperationConfig = {
+    onError,
+    handler: async (state): Promise<OperationResponse> => {
+      const { id, name, email, role } = await readUser(state.itemId)
+      return { values: { name, email, role }, id }
+    },
   }
 
-  const remove = async (state: FormState) => {
-    const response = await deleteUser(state.itemId)
-    router.push('/')
-    return response
+  const createOperation: OperationConfig = {
+    schema: userSchema,
+    onError,
+    onSuccess: (state) => {
+      router.push(`/users/${state.response!.id}`)
+    },
+    handler: async (state): Promise<OperationResponse> => {
+      const { id, name, email, role } = await createUser(state.values)
+      return { values: { name, email, role }, id }
+    },
+  }
+
+  const updateOperation: OperationConfig = {
+    schema: userSchema,
+    onError,
+    handler: async (state): Promise<OperationResponse> => {
+      const { id, name, email, role } = await updateUser(state.itemId, state.values)
+      return { values: { name, email, role }, id }
+    },
+  }
+
+  const deleteOperation: OperationConfig = {
+    onError,
+    handler: async (state): Promise<OperationResponse> => {
+      await deleteUser(state.itemId)
+      router.push('/')
+      return {}
+    },
   }
 
   return (
@@ -43,15 +84,12 @@ export default function UserPage() {
         ← All users
       </Link>
 
-      <Form
+      <AppForm
         itemId={itemId}
-        schema={userSchema}
-        read={(state) => readUser(state.itemId)}
-        create={create}
-        update={(state) => updateUser(state.itemId, state.values)}
-        delete={remove}
-        archive={(state) => setArchived(state.itemId, true)}
-        unarchive={(state) => setArchived(state.itemId, false)}
+        read={readOperation}
+        create={createOperation}
+        update={updateOperation}
+        delete={deleteOperation}
       >
         {({ context }) => {
           return (
@@ -60,9 +98,6 @@ export default function UserPage() {
                 <h1 className="text-2xl font-semibold text-highlighted">
                   {context.isCreateMode ? 'New user' : 'Edit user'}
                 </h1>
-                {context.isArchived && (
-                  <span className="rounded bg-elevated px-2 py-0.5 text-xs">Archived</span>
-                )}
                 {context.isReading && <span className="text-sm text-muted">Loading...</span>}
               </div>
 
@@ -71,34 +106,25 @@ export default function UserPage() {
                   <FormField name="name">
                     {({ label, error, inputProps }) => {
                       return (
-                        <label className="flex flex-col gap-1">
-                          <span className="text-sm font-medium">{label}</span>
+                        <UserField label={label} error={error}>
                           <input {...inputProps} className={INPUT_CLASS} />
-                          {error && (
-                            <span className="text-sm text-red-600 dark:text-red-400">{error}</span>
-                          )}
-                        </label>
+                        </UserField>
                       )
                     }}
                   </FormField>
                   <FormField name="email">
                     {({ label, error, inputProps }) => {
                       return (
-                        <label className="flex flex-col gap-1">
-                          <span className="text-sm font-medium">{label}</span>
+                        <UserField label={label} error={error}>
                           <input type="email" {...inputProps} className={INPUT_CLASS} />
-                          {error && (
-                            <span className="text-sm text-red-600 dark:text-red-400">{error}</span>
-                          )}
-                        </label>
+                        </UserField>
                       )
                     }}
                   </FormField>
                   <FormField name="role">
                     {({ label, error, inputProps }) => {
                       return (
-                        <label className="flex flex-col gap-1">
-                          <span className="text-sm font-medium">{label}</span>
+                        <UserField label={label} error={error}>
                           <select {...inputProps} className={INPUT_CLASS}>
                             <option value="">Select a role</option>
                             {ROLES.map((role) => {
@@ -109,10 +135,7 @@ export default function UserPage() {
                               )
                             })}
                           </select>
-                          {error && (
-                            <span className="text-sm text-red-600 dark:text-red-400">{error}</span>
-                          )}
-                        </label>
+                        </UserField>
                       )
                     }}
                   </FormField>
@@ -132,8 +155,6 @@ export default function UserPage() {
               <div className="flex flex-wrap gap-2">
                 <FormCreate />
                 <FormUpdate />
-                <FormArchive />
-                <FormUnarchive />
                 <FormDelete />
               </div>
 
@@ -147,7 +168,7 @@ export default function UserPage() {
             </div>
           )
         }}
-      </Form>
+      </AppForm>
     </div>
   )
 }

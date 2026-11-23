@@ -1,5 +1,5 @@
 <template>
-  <div :class="CLASS_PREFIX">
+  <div class="shilp-form">
     <slot :context="context" />
   </div>
 </template>
@@ -8,79 +8,74 @@
 import type {
   FieldErrors,
   FormContext,
-  FormError,
-  FormOptions,
   FormPropsBase,
   FormState,
-  ItemHandler,
-  ItemResponse,
+  OperationResponse,
+  OperationConfig,
+  OperationError,
+  OperationItem,
   Values,
 } from '@shared'
-import { CLASS_PREFIX, CONTEXT_KEY, OPTIONS_KEY } from '@shared/constants'
+import { getDuplicateOperationKeyMessage } from '@shared/constants/messages'
 import {
   addTouched,
-  cloneValues,
   getDefaultValues,
   getDirtyValues,
+  getOperations,
   mergeWithDefaults,
-  normalizeFields,
-  resolveOptions,
+  generateFieldErrors,
   resolveSchema,
-  runItemAction,
-  setFieldErrorIn,
-  setFieldErrorsIn,
   toggleDirty,
+  warnIfInvalidMode,
 } from '@shared/utils'
-import { computed, inject, provide, reactive, ref, toRaw, toRefs, watch } from 'vue'
+import { computed, provide, reactive, ref, toRaw, toRefs, watch } from 'vue'
 
 defineOptions({
-  // `Form` (PascalCase) resolves to this component in SFC templates; lowercase `<form>` stays native.
   // eslint-disable-next-line vue/multi-word-component-names, vue/no-reserved-component-names
   name: 'Form',
 })
 
 const props = defineProps<FormPropsBase>()
 
-const globalOptions = inject<Partial<FormOptions> | null>(OPTIONS_KEY, null)
-const options = computed(() => {
-  return resolveOptions(globalOptions, {
-    resolveMode: props.resolveMode,
-    schemaToFields: props.schemaToFields,
-    validateSchema: props.validateSchema,
-    errorAdapter: props.errorAdapter,
-    isArchivedItemCheck: props.isArchivedItemCheck,
-  })
-})
-
 const values = ref<Values>({})
 const initialValues = ref<Values>({})
 const touched = ref<string[]>([])
 const dirty = ref<string[]>([])
 const fieldErrors = ref<FieldErrors>({})
-const error = ref<FormError | null>(null)
-const response = ref<ItemResponse | null>(null)
-const isArchived = ref(false)
-const isReading = ref(false)
-const isCreating = ref(false)
-const isUpdating = ref(false)
-const isDeleting = ref(false)
-const isArchiving = ref(false)
-const isUnarchiving = ref(false)
+const error = ref<OperationError | null>(null)
+const response = ref<OperationResponse | null>(null)
+const running = ref<Record<string, boolean>>({})
+
+const isReading = computed(() => {
+  return Boolean(running.value.read)
+})
+
+const isCreating = computed(() => {
+  return Boolean(running.value.create)
+})
+
+const isUpdating = computed(() => {
+  return Boolean(running.value.update)
+})
+
+const isDeleting = computed(() => {
+  return Boolean(running.value.delete)
+})
 
 const isLoading = computed(() => {
-  return (
-    isReading.value ||
-    isCreating.value ||
-    isUpdating.value ||
-    isDeleting.value ||
-    isArchiving.value ||
-    isUnarchiving.value
-  )
+  return Object.values(running.value).some(Boolean)
+})
+
+const operations = computed(() => {
+  return getOperations(props)
 })
 
 const mode = computed(() => {
-  return options.value.resolveMode({ itemId: props.itemId })
+  return props.modeDetector({ itemId: props.itemId })
 })
+
+// Watched so an invalid mode warns once per change, as in React.
+watch(mode, warnIfInvalidMode, { immediate: true })
 
 const isCreateMode = computed(() => {
   return mode.value === 'create'
@@ -91,173 +86,24 @@ const isUpdateMode = computed(() => {
 })
 
 const fields = computed(() => {
-  const targetSchema = resolveSchema(mode.value, props)
-  return normalizeFields(options.value.schemaToFields(targetSchema))
+  return props.fieldsGenerator({ schema: resolveSchema(mode.value, props) })
 })
 
 const dirtyValues = computed(() => {
   return getDirtyValues(dirty.value, values.value)
 })
 
-/** A plain snapshot (no methods, no proxies) for the handlers, `validateSchema` and `errorAdapter`. */
-const getState = (): FormState => {
-  return {
-    mode: mode.value,
-    itemId: props.itemId,
-    schema: props.schema,
-    createSchema: props.createSchema,
-    updateSchema: props.updateSchema,
-    fields: fields.value,
-    values: toRaw(values.value),
-    initialValues: toRaw(initialValues.value),
-    dirtyValues: dirtyValues.value,
-    touched: toRaw(touched.value),
-    dirty: toRaw(dirty.value),
-    error: error.value,
-    fieldErrors: toRaw(fieldErrors.value),
-    meta: props.meta,
-    response: response.value,
-    isCreateMode: isCreateMode.value,
-    isUpdateMode: isUpdateMode.value,
-    isArchived: isArchived.value,
-    isLoading: isLoading.value,
-    isReading: isReading.value,
-    isCreating: isCreating.value,
-    isUpdating: isUpdating.value,
-    isDeleting: isDeleting.value,
-    isArchiving: isArchiving.value,
-    isUnarchiving: isUnarchiving.value,
-  }
-}
-
-function loadValues(newValues: Values | undefined) {
-  const merged = mergeWithDefaults(fields.value, newValues)
-  values.value = merged
-  initialValues.value = cloneValues(merged)
-  touched.value = []
-  dirty.value = []
-}
-
-function setError(newError: FormError | null) {
-  error.value = newError
-  if (newError) {
-    fieldErrors.value = { ...newError.fieldErrors }
-  } else {
-    fieldErrors.value = {}
-  }
-}
-
-function onResponse(newResponse: ItemResponse) {
-  response.value = newResponse
-  isArchived.value = isUpdateMode.value && options.value.isArchivedItemCheck(newResponse)
-  if (newResponse.values) {
-    loadValues(newResponse.values)
-  }
-}
-
-function run(
-  name: string,
-  handler: ItemHandler | undefined,
-  isValidated: boolean,
-  flag: { value: boolean },
-) {
-  return runItemAction({
-    name,
-    handler,
-    isValidated,
-    options: options.value,
-    getState,
-    setIsRunning: (isRunning) => {
-      flag.value = isRunning
-    },
-    setError,
-    onResponse,
-  })
-}
-
-function readItem() {
-  return run('read', props.read, false, isReading)
-}
-
-function createItem() {
-  return run('create', props.create, true, isCreating)
-}
-
-function updateItem() {
-  return run('update', props.update, true, isUpdating)
-}
-
-function deleteItem() {
-  return run('delete', props.delete, false, isDeleting)
-}
-
-function archiveItem() {
-  return run('archive', props.archive, false, isArchiving)
-}
-
-function unarchiveItem() {
-  return run('unarchive', props.unarchive, false, isUnarchiving)
-}
-
-function setValue(name: string, value: unknown) {
-  values.value = { ...values.value, [name]: value }
-  touched.value = addTouched(touched.value, name)
-  dirty.value = toggleDirty(dirty.value, name, value, initialValues.value)
-  fieldErrors.value = setFieldErrorIn(fieldErrors.value, name, null)
-}
-
-function setFieldError(name: string, message: string | null) {
-  fieldErrors.value = setFieldErrorIn(fieldErrors.value, name, message)
-}
-
-function setFieldErrors(errors: FieldErrors) {
-  fieldErrors.value = setFieldErrorsIn(fieldErrors.value, errors)
-}
-
-function clearErrors() {
-  setError(null)
-}
-
-function resetForm() {
-  let source = getDefaultValues(fields.value)
-  if (isUpdateMode.value) {
-    source = toRaw(initialValues.value)
-  }
-  loadValues(cloneValues(source))
-  setError(null)
-}
-
-// 1. Setup: read the item in update mode, load the field defaults in create mode.
-function init() {
-  if (isUpdateMode.value) {
-    readItem()
-    return
-  }
-  response.value = null
-  isArchived.value = false
-  setError(null)
-  loadValues(getDefaultValues(fields.value))
-}
-
-function refresh() {
-  init()
-}
-
-const context: FormContext = reactive({
-  mode,
+/*
+ * The state keys of the context, defined once. The context spreads it, `getState` snapshots it.
+ */
+const state: FormState = reactive({
   itemId: computed(() => {
     return props.itemId
   }),
-  schema: computed(() => {
-    return props.schema
-  }),
-  createSchema: computed(() => {
-    return props.createSchema
-  }),
-  updateSchema: computed(() => {
-    return props.updateSchema
-  }),
+  operations,
   fields,
+
+  mode,
   values,
   initialValues,
   dirtyValues,
@@ -265,40 +111,162 @@ const context: FormContext = reactive({
   dirty,
   error,
   fieldErrors,
-  meta: computed(() => {
-    return props.meta
-  }),
   response,
   isCreateMode,
   isUpdateMode,
-  isArchived,
+  running,
   isLoading,
   isReading,
   isCreating,
   isUpdating,
   isDeleting,
-  isArchiving,
-  isUnarchiving,
-  readItem,
-  createItem,
-  updateItem,
-  deleteItem,
-  archiveItem,
-  unarchiveItem,
-  setValue,
+})
+
+/*
+ * A plain snapshot (no methods, no proxies) for the handlers, `schemaValidator` and the
+ * callbacks.
+ */
+const getState = (): FormState => {
+  return {
+    ...state,
+    values: toRaw(state.values),
+    initialValues: toRaw(state.initialValues),
+    touched: toRaw(state.touched),
+    dirty: toRaw(state.dirty),
+    fieldErrors: toRaw(state.fieldErrors),
+  }
+}
+
+function loadValues(newValues: Values | undefined) {
+  const merged = mergeWithDefaults(fields.value, newValues)
+  values.value = merged
+  initialValues.value = structuredClone(merged)
+  touched.value = []
+  dirty.value = []
+}
+
+function setError(newError: OperationError | null) {
+  error.value = newError
+  if (newError) {
+    setFieldErrors(newError.fieldErrors)
+  } else {
+    setFieldErrors({})
+  }
+}
+
+function onError({ error: newError, operation }: { error: unknown; operation: OperationConfig }) {
+  // A TypeError is a bug in the consumer's code, not an API error, so it is logged too.
+  if (newError instanceof TypeError) {
+    console.error(newError)
+  }
+  const operationError = operation.onError?.(newError, getState())
+  if (operationError) {
+    setError(operationError)
+  }
+}
+
+function validate(operation: OperationItem) {
+  if (operation.schema) {
+    return props.schemaValidator(getState(), operation)
+  }
+  return Promise.resolve()
+}
+
+function getOperation(key: string) {
+  const matches = operations.value.filter((item) => {
+    return item.key === key
+  })
+  if (matches.length > 1) {
+    console.warn(getDuplicateOperationKeyMessage(key))
+  }
+  return matches[0]
+}
+
+function runOperation(key: string) {
+  const operation = getOperation(key)
+  running.value = { ...running.value, [key]: true }
+  setError(null)
+  return validate(operation)
+    .then(() => operation.handler(getState()))
+    .then((newResponse) => {
+      response.value = newResponse
+      if (newResponse.values) {
+        loadValues(newResponse.values)
+      }
+      operation.onSuccess?.(getState())
+    })
+    .catch((error) => {
+      return onError({ error, operation })
+    })
+    .finally(() => {
+      running.value = { ...running.value, [key]: false }
+    })
+}
+
+function isRunning(key: string) {
+  return Boolean(running.value[key])
+}
+
+function setFieldValue(name: string, value: unknown) {
+  values.value = { ...values.value, [name]: value }
+  touched.value = addTouched(touched.value, name)
+  dirty.value = toggleDirty(dirty.value, name, value, initialValues.value)
+  setFieldError(name, null)
+}
+
+function setFieldError(name: string, message: string | null) {
+  fieldErrors.value = generateFieldErrors(fieldErrors.value, { [name]: message })
+}
+
+function setFieldErrors(errors: FieldErrors) {
+  fieldErrors.value = generateFieldErrors({}, errors)
+}
+
+function clearErrors() {
+  setError(null)
+}
+
+function reset() {
+  let source = getDefaultValues(fields.value)
+  if (isUpdateMode.value) {
+    source = toRaw(initialValues.value)
+  }
+  loadValues(structuredClone(source))
+  setError(null)
+}
+
+function init() {
+  if (isUpdateMode.value) {
+    runOperation('read')
+  } else {
+    loadValues(getDefaultValues(fields.value))
+  }
+}
+
+function refresh() {
+  response.value = null
+  setError(null)
+  init()
+}
+
+const context: FormContext = reactive({
+  ...toRefs(state),
+  runOperation,
+  isRunning,
+  setFieldValue,
   setFieldError,
   setFieldErrors,
   clearErrors,
-  resetForm,
+  reset,
   refresh,
 })
 
-provide(CONTEXT_KEY, context)
+provide('shilp-form', context)
 
-// 2. Runs on setup and whenever `itemId` changes.
 watch(() => {
   return props.itemId
 }, init)
+
 init()
 
 defineExpose(toRefs(context))

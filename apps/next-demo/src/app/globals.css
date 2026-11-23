@@ -72,8 +72,6 @@
   @apply rounded-md bg-primary px-2.5 py-1.5 text-sm font-medium text-inverted transition-colors hover:bg-primary/75 disabled:opacity-75;
 }
 
-.shilp-form__delete button,
-.shilp-form__archive button,
-.shilp-form__unarchive button {
+.shilp-form__delete button {
   @apply bg-default text-default ring ring-accented ring-inset hover:bg-elevated;
 }

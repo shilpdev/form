@@ -1,12 +1,21 @@
-import { CLASS_PREFIX } from '@shared/constants'
+import { FIELD_CONTEXT_OUTSIDE_FIELD_MESSAGE } from '@shared/constants/messages'
+import { useFieldContext } from '../context/field-context'
 import { useFormContext } from '../context/form-context'
 import type { FormFieldErrorProps } from '../types'
 import { Slot } from './slot'
 
-/** The error message of one field, shown only when there is one. Gets `{ context, error }`. */
 export const FormFieldError = ({ name, children }: FormFieldErrorProps) => {
   const context = useFormContext()
-  const error = context.fieldErrors[name]
+  const fieldScope = useFieldContext()
+
+  let error: string | null | undefined
+  if (name) {
+    error = context.fieldErrors[name]
+  } else if (fieldScope) {
+    error = fieldScope.error
+  } else {
+    throw new Error(FIELD_CONTEXT_OUTSIDE_FIELD_MESSAGE)
+  }
 
   if (!error) {
     return null
@@ -14,7 +23,7 @@ export const FormFieldError = ({ name, children }: FormFieldErrorProps) => {
 
   return (
     <Slot
-      className={`${CLASS_PREFIX}__field-error`}
+      className="shilp-form__field-error"
       scope={{ context, error }}
       children={children}
       fallback={() => {

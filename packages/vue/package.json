@@ -1,7 +1,7 @@
 {
   "name": "@shilp.dev/vue-form",
   "version": "0.1.0",
-  "description": "Headless CRUD forms: read, create, update, delete, archive and unarchive an item from one schema, with your own markup.",
+  "description": "Headless CRUD forms: read, create, update, delete an item from one schema, with your own markup.",
   "keywords": [
     "vue",
     "vue-form",

@@ -1,5 +1,5 @@
 <template>
-  <div :class="`${CLASS_PREFIX}__fields`">
+  <div class="shilp-form__fields">
     <slot :context="context">
       <FormField v-for="field in context.fields" :key="field.name" :name="field.name" />
     </slot>
@@ -7,14 +7,13 @@
 </template>
 
 <script setup lang="ts">
-import { CLASS_PREFIX } from '@shared/constants'
-import { useFormContext } from '../composables/use-form-context'
+import type { FormContext } from '@shared'
 import FormField from './field.vue'
+import { inject } from 'vue'
 
-/** Wraps the fields. Without a slot it renders a `FormField` for every field. */
 defineOptions({
   name: 'FormFields',
 })
 
-const context = useFormContext()
+const context = inject<FormContext>('shilp-form')!
 </script>

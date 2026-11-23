@@ -1,7 +1,36 @@
-import type { FormPartProps } from '../types'
-import { ActionButton } from './action-button'
+import { CREATE_MESSAGE, CREATING_MESSAGE } from '@shared/constants/messages'
+import { useFormContext } from '../context/form-context'
+import type { FormActionProps } from '../types'
+import { Slot } from './slot'
 
-/** Calls `createItem`. Gets `{ context }`. */
-export const FormCreate = ({ children }: FormPartProps) => {
-  return <ActionButton action="create" children={children} />
+export const FormCreate = ({ children }: FormActionProps) => {
+  const context = useFormContext()
+
+  const run = () => {
+    return context.runOperation('create')
+  }
+
+  if (!context.isCreateMode) {
+    return null
+  }
+
+  let label = CREATE_MESSAGE
+  if (context.isCreating) {
+    label = CREATING_MESSAGE
+  }
+
+  return (
+    <Slot
+      className="shilp-form__create"
+      scope={{ context, run }}
+      children={children}
+      fallback={() => {
+        return (
+          <button type="button" onClick={run} disabled={context.isLoading}>
+            {label}
+          </button>
+        )
+      }}
+    />
+  )
 }

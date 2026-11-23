@@ -1,16 +1,29 @@
-/** A field after `normalizeFields`: always has a `name` and a `label`. Extra keys are kept. */
+import type { FormScope } from './form'
+
+/*
+ * What `fieldsGenerator` returns per field: always has a `name` and a `label`. Extra keys are kept.
+ * Example: `{ name: 'email', label: 'Email', value: '' }`
+ */
 export interface Field {
   name: string
   label: string
-  /** Default value used in create mode and by `resetForm`. */
+  /** Default value used in create mode and by `reset`. */
   value?: unknown
-  /** Nested fields (for example a repeater), serialized the same way by `attrSerializer`. */
-  attrs?: Field[]
   [key: string]: unknown
 }
 
-/** What `schemaToFields` may return per field: a name, or an object with at least a `name`. */
-export type FieldInput = string | (Partial<Field> & { name: string; attrs?: FieldInput[] })
-
 /** Form values keyed by field name. Loose on purpose: the library does not read the values. */
 export type Values = Record<string, unknown>
+
+export interface FieldPropsBase {
+  name: string
+}
+
+export interface FieldScope extends FormScope {
+  field: Field
+  name: string
+  label: string
+  value: unknown
+  error: string | null
+  updateValue: (value: unknown) => void
+}

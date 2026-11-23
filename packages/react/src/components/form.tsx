@@ -1,42 +1,41 @@
 import type {
   FieldErrors,
   FormContext,
-  FormError,
   FormState,
-  ItemHandler,
-  ItemResponse,
+  OperationResponse,
+  OperationConfig,
+  OperationError,
+  OperationItem,
   Values,
 } from '@shared'
-import { CLASS_PREFIX } from '@shared/constants'
+import { getDuplicateOperationKeyMessage } from '@shared/constants/messages'
 import {
   addTouched,
-  cloneValues,
   getDefaultValues,
   getDirtyValues,
+  getOperations,
   mergeWithDefaults,
-  normalizeFields,
-  resolveOptions,
   resolveSchema,
-  runItemAction,
-  setFieldErrorIn,
-  setFieldErrorsIn,
+  generateFieldErrors,
   toggleDirty,
+  warnIfInvalidMode,
 } from '@shared/utils'
-import { useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
-import { FormContextProvider, useFormOptions } from '../context/form-context'
+import { useEffect, useImperativeHandle, useRef, useState } from 'react'
+import { FormContextProvider } from '../context/form-context'
 import type { FormProps } from '../types'
 import { Slot } from './slot'
 
-/** Everything the user edits plus what the last response set. Changed together, so kept together. */
+/*
+ * Everything the user edits plus what the last response set. Changed together, so kept together.
+ */
 interface FormData {
   values: Values
   initialValues: Values
   touched: string[]
   dirty: string[]
   fieldErrors: FieldErrors
-  error: FormError | null
-  response: ItemResponse | null
-  isArchived: boolean
+  error: OperationError | null
+  response: OperationResponse | null
 }
 
 const EMPTY_DATA: FormData = {
@@ -47,53 +46,56 @@ const EMPTY_DATA: FormData = {
   fieldErrors: {},
   error: null,
   response: null,
-  isArchived: false,
 }
 
-export function Form<Schema = unknown>(props: FormProps<Schema>) {
+/** The `FormState` keys that come from which operations are running: `running` and its flags. */
+const getRunningState = (running: Record<string, boolean>) => {
+  return {
+    running,
+    isLoading: Object.values(running).some(Boolean),
+    isReading: Boolean(running.read),
+    isCreating: Boolean(running.create),
+    isUpdating: Boolean(running.update),
+    isDeleting: Boolean(running.delete),
+  }
+}
+
+export function Form(props: FormProps) {
   const {
     itemId,
-    schema,
-    createSchema,
-    updateSchema,
-    read,
     create,
+    read,
     update,
     delete: remove,
-    archive,
-    unarchive,
-    meta,
-    resolveMode,
-    schemaToFields,
-    validateSchema,
-    errorAdapter,
-    isArchivedItemCheck,
+    operations: customOperations,
+    modeDetector,
+    fieldsGenerator,
+    schemaValidator,
     ref,
     children,
   } = props
 
-  const globalOptions = useFormOptions<Schema>()
-  const options = resolveOptions(globalOptions, {
-    resolveMode,
-    schemaToFields,
-    validateSchema,
-    errorAdapter,
-    isArchivedItemCheck,
-  })
-
-  const mode = options.resolveMode({ itemId })
+  const mode = modeDetector({ itemId })
+  // In an effect so an invalid mode warns once per change, not on every render.
+  useEffect(() => {
+    warnIfInvalidMode(mode)
+  }, [mode])
   const isCreateMode = mode === 'create'
   const isUpdateMode = mode === 'update'
-  const targetSchema = resolveSchema(mode, { schema, createSchema, updateSchema })
+  const targetSchema = resolveSchema(mode, { create, update })
+  const operations = getOperations({
+    create,
+    read,
+    update,
+    delete: remove,
+    operations: customOperations,
+  })
 
-  // Memoized on the schema so an inline `schemaToFields` does not rebuild the fields every render.
-  const fields = useMemo(() => {
-    return normalizeFields(options.schemaToFields(targetSchema))
-  }, [targetSchema])
+  const fields = fieldsGenerator({ schema: targetSchema })
 
   /*
    * `dataRef` is the source of truth and is updated synchronously, so an action called in the same
-   * event as `setValue` sends the new value. `_setData` only triggers the render.
+   * event as `setFieldValue` sends the new value. `_setData` only triggers the render.
    */
   const dataRef = useRef<FormData>(EMPTY_DATA)
   const [data, _setData] = useState<FormData>(EMPTY_DATA)
@@ -102,21 +104,22 @@ export function Form<Schema = unknown>(props: FormProps<Schema>) {
     _setData(dataRef.current)
   }
 
-  const [isReading, _setIsReading] = useState(false)
-  const [isCreating, _setIsCreating] = useState(false)
-  const [isUpdating, _setIsUpdating] = useState(false)
-  const [isDeleting, _setIsDeleting] = useState(false)
-  const [isArchiving, _setIsArchiving] = useState(false)
-  const [isUnarchiving, _setIsUnarchiving] = useState(false)
-  const isLoading =
-    isReading || isCreating || isUpdating || isDeleting || isArchiving || isUnarchiving
+  /*
+   * Same pattern as `dataRef`: `runningRef` is updated synchronously, so `getState` and `isRunning`
+   * see an operation as running from the moment `runOperation` is called. `_setRunning` only
+   * triggers the render.
+   */
+  const runningRef = useRef<Record<string, boolean>>({})
+  const [running, _setRunning] = useState<Record<string, boolean>>({})
+  const setRunning = (key: string, isKeyRunning: boolean) => {
+    runningRef.current = { ...runningRef.current, [key]: isKeyRunning }
+    _setRunning(runningRef.current)
+  }
 
-  const state: FormState<Schema> = {
+  const state: FormState = {
     mode,
     itemId,
-    schema,
-    createSchema,
-    updateSchema,
+    operations,
     fields,
     values: data.values,
     initialValues: data.initialValues,
@@ -125,27 +128,20 @@ export function Form<Schema = unknown>(props: FormProps<Schema>) {
     dirty: data.dirty,
     error: data.error,
     fieldErrors: data.fieldErrors,
-    meta,
     response: data.response,
     isCreateMode,
     isUpdateMode,
-    isArchived: data.isArchived,
-    isLoading,
-    isReading,
-    isCreating,
-    isUpdating,
-    isDeleting,
-    isArchiving,
-    isUnarchiving,
+    ...getRunningState(running),
   }
   const stateRef = useRef(state)
   stateRef.current = state
 
-  /** The rendered state with the latest form data, for handlers that run after an `await`. */
-  const getState = (): FormState<Schema> => {
+  /** The rendered state with the latest form data and flags, for callbacks that run before a render. */
+  const getState = (): FormState => {
     const current = dataRef.current
     return {
       ...stateRef.current,
+      ...getRunningState(runningRef.current),
       values: current.values,
       initialValues: current.initialValues,
       dirtyValues: getDirtyValues(current.dirty, current.values),
@@ -154,136 +150,142 @@ export function Form<Schema = unknown>(props: FormProps<Schema>) {
       error: current.error,
       fieldErrors: current.fieldErrors,
       response: current.response,
-      isArchived: current.isArchived,
     }
   }
 
   const loadValues = (values: Values | undefined): Partial<FormData> => {
     const merged = mergeWithDefaults(fields, values)
-    return { values: merged, initialValues: cloneValues(merged), touched: [], dirty: [] }
+    return { values: merged, initialValues: structuredClone(merged), touched: [], dirty: [] }
   }
 
-  const setError = (error: FormError | null) => {
+  const setError = (error: OperationError | null) => {
+    commit({ error })
     if (error) {
-      commit({ error, fieldErrors: { ...error.fieldErrors } })
+      setFieldErrors(error.fieldErrors)
     } else {
-      commit({ error: null, fieldErrors: {} })
+      setFieldErrors({})
     }
   }
 
-  const onResponse = (response: ItemResponse) => {
-    let patch: Partial<FormData> = {
-      response,
-      isArchived: isUpdateMode && options.isArchivedItemCheck(response),
+  const onError = ({ error, operation }: { error: unknown; operation: OperationConfig }) => {
+    // A TypeError is a bug in the consumer's code, not an API error, so it is logged too.
+    if (error instanceof TypeError) {
+      console.error(error)
     }
-    if (response.values) {
-      patch = { ...patch, ...loadValues(response.values) }
+    const operationError = operation.onError?.(error, getState())
+    if (operationError) {
+      setError(operationError)
     }
-    commit(patch)
   }
 
-  const run = (
-    name: string,
-    handler: ItemHandler<Schema> | undefined,
-    isValidated: boolean,
-    setIsRunning: (isRunning: boolean) => void,
-  ) => {
-    return runItemAction({
-      name,
-      handler,
-      isValidated,
-      options,
-      getState,
-      setIsRunning,
-      setError,
-      onResponse,
+  const validate = (operation: OperationItem) => {
+    if (operation.schema) {
+      return schemaValidator(getState(), operation)
+    }
+    return Promise.resolve()
+  }
+
+  const getOperation = (key: string) => {
+    const matches = operations.filter((item) => {
+      return item.key === key
     })
+    if (matches.length > 1) {
+      console.warn(getDuplicateOperationKeyMessage(key))
+    }
+    return matches[0]
   }
 
-  const readItem = () => {
-    return run('read', read, false, _setIsReading)
-  }
-  const createItem = () => {
-    return run('create', create, true, _setIsCreating)
-  }
-  const updateItem = () => {
-    return run('update', update, true, _setIsUpdating)
-  }
-  const deleteItem = () => {
-    return run('delete', remove, false, _setIsDeleting)
-  }
-  const archiveItem = () => {
-    return run('archive', archive, false, _setIsArchiving)
-  }
-  const unarchiveItem = () => {
-    return run('unarchive', unarchive, false, _setIsUnarchiving)
+  const runOperation = (key: string) => {
+    const operation = getOperation(key)
+    setRunning(key, true)
+    setError(null)
+    return validate(operation)
+      .then(() => operation.handler(getState()))
+      .then((response) => {
+        let patch: Partial<FormData> = { response }
+        if (response.values) {
+          patch = { ...patch, ...loadValues(response.values) }
+        }
+        commit(patch)
+        operation.onSuccess?.(getState())
+      })
+      .catch((error) => {
+        return onError({ error, operation })
+      })
+      .finally(() => {
+        setRunning(key, false)
+      })
   }
 
-  const setValue = (name: string, value: unknown) => {
+  const isRunning = (key: string) => {
+    return Boolean(runningRef.current[key])
+  }
+
+  const setFieldValue = (name: string, value: unknown) => {
     const current = dataRef.current
     commit({
       values: { ...current.values, [name]: value },
       touched: addTouched(current.touched, name),
       dirty: toggleDirty(current.dirty, name, value, current.initialValues),
-      fieldErrors: setFieldErrorIn(current.fieldErrors, name, null),
     })
+    setFieldError(name, null)
   }
 
   const setFieldError = (name: string, message: string | null) => {
-    commit({ fieldErrors: setFieldErrorIn(dataRef.current.fieldErrors, name, message) })
+    commit({ fieldErrors: generateFieldErrors(dataRef.current.fieldErrors, { [name]: message }) })
   }
 
   const setFieldErrors = (errors: FieldErrors) => {
-    commit({ fieldErrors: setFieldErrorsIn(dataRef.current.fieldErrors, errors) })
+    commit({ fieldErrors: generateFieldErrors({}, errors) })
   }
 
   const clearErrors = () => {
-    commit({ error: null, fieldErrors: {} })
+    commit({ error: null, fieldErrors: generateFieldErrors() })
   }
 
-  const resetForm = () => {
+  const reset = () => {
     const current = dataRef.current
     let values = getDefaultValues(fields)
     if (isUpdateMode) {
       values = current.initialValues
     }
-    commit({ ...loadValues(cloneValues(values)), error: null, fieldErrors: {} })
+    commit({
+      ...loadValues(structuredClone(values)),
+      error: null,
+      fieldErrors: generateFieldErrors(),
+    })
   }
 
-  // 1. Setup: read the item in update mode, load the field defaults in create mode.
   const init = () => {
     if (isUpdateMode) {
-      readItem()
-      return
+      runOperation('read')
+    } else {
+      commit(loadValues(getDefaultValues(fields)))
     }
-    commit({ ...EMPTY_DATA, ...loadValues(getDefaultValues(fields)) })
   }
 
   const refresh = () => {
+    commit({ response: null })
+    setError(null)
     init()
   }
 
   const initRef = useRef(init)
   initRef.current = init
 
-  // 2. Runs on mount and whenever `itemId` changes, like the Vue `watch`.
   useEffect(() => {
     initRef.current()
   }, [itemId])
 
-  const context: FormContext<Schema> = {
+  const context: FormContext = {
     ...state,
-    readItem,
-    createItem,
-    updateItem,
-    deleteItem,
-    archiveItem,
-    unarchiveItem,
-    setValue,
+    runOperation,
+    isRunning,
+    setFieldValue,
     setFieldError,
     setFieldErrors,
     clearErrors,
-    resetForm,
+    reset,
     refresh,
   }
 
@@ -294,7 +296,7 @@ export function Form<Schema = unknown>(props: FormProps<Schema>) {
   return (
     <FormContextProvider value={context}>
       <Slot
-        className={CLASS_PREFIX}
+        className="shilp-form"
         scope={{ context }}
         children={children}
         fallback={() => {

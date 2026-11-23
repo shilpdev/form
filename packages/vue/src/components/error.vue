@@ -1,5 +1,5 @@
 <template>
-  <div v-if="context.error" :class="`${CLASS_PREFIX}__error`">
+  <div v-if="context.error" class="shilp-form__error">
     <slot :context="context">
       <pre>{{ getErrorMessage(context.error) }}</pre>
     </slot>
@@ -7,14 +7,13 @@
 </template>
 
 <script setup lang="ts">
-import { CLASS_PREFIX } from '@shared/constants'
-import { getErrorMessage } from '@shared/messages'
-import { useFormContext } from '../composables/use-form-context'
+import type { FormContext } from '@shared'
+import { getErrorMessage } from '@shared/constants/messages'
+import { inject } from 'vue'
 
-/** The error of the last action, shown only when there is one. */
 defineOptions({
   name: 'FormError',
 })
 
-const context = useFormContext()
+const context = inject<FormContext>('shilp-form')!
 </script>

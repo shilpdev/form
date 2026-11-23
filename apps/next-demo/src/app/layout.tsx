@@ -2,7 +2,6 @@ import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 import { AppHeader } from '@/components/app-header'
 import { COLOR_MODE_SCRIPT } from '@/components/color-mode'
-import { Providers } from '@/components/providers'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -29,7 +28,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
         <AppHeader />
         <main className="min-h-[calc(100vh-4rem)]">
           <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
-            <Providers>{children}</Providers>
+            {children}
           </div>
         </main>
       </body>

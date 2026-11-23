@@ -1,132 +1,134 @@
-import type { FormError, FieldErrors } from './error'
-import type { Field, FieldInput, Values } from './field'
+import type { OperationError, FieldErrors } from './error'
+import type { Field, Values } from './field'
 
 /** `create` when there is no item yet, `update` when `itemId` points at an existing item. */
 export type FormMode = 'create' | 'update'
 
-/** The actions that have a button component. */
-export type FormAction = 'create' | 'update' | 'delete' | 'archive' | 'unarchive'
-
 /** Loose object for consumer data the library passes through without reading it. */
 export type Meta = Record<string, unknown>
 
-/** What every handler (`read`, `create`, `update`, `delete`, `archive`, `unarchive`) resolves with. */
-export interface ItemResponse {
+/*
+ * What every `handler` must resolve with: `{ values }` to load into the form, plus any extra keys.
+ * Example: `{ values: { name: 'Aarav' }, id: 1 }`
+ */
+export interface OperationResponse {
   /** Loaded into the form. Missing keys fall back to the field defaults. */
   values?: Values
   [key: string]: unknown
 }
 
-/** Data only (no methods): handed to the handlers, `validateSchema` and `errorAdapter`. */
-export interface FormState<Schema = unknown> {
+/** Data only (no methods): handed to the handlers, `schemaValidator` and the callbacks. */
+export interface FormState {
   mode: FormMode
   itemId?: string | number
-  schema?: Schema
-  createSchema?: Schema
-  updateSchema?: Schema
-  /** The fields of the schema in use for the current mode, normalized. */
+  operations: OperationItem[]
   fields: Field[]
   values: Values
   initialValues: Values
-  /** Only the values that differ from `initialValues`. */
   dirtyValues: Values
   /** Names of the fields the user has changed at least once. */
   touched: string[]
   /** Names of the fields whose value differs from `initialValues`. */
   dirty: string[]
-  error: FormError | null
+  error: OperationError | null
   /** Per-field messages: from `error.fieldErrors`, plus any set with `setFieldError`. */
   fieldErrors: FieldErrors
-  meta?: Meta
-  /** The last handler response. */
-  response: ItemResponse | null
+  response: OperationResponse | null
   isCreateMode: boolean
   isUpdateMode: boolean
-  isArchived: boolean
+  /*
+   * Whether each operation is running, by key.
+   * Example: `{ create: true, approve: false }`
+   */
+  running: Record<string, boolean>
   isLoading: boolean
   isReading: boolean
   isCreating: boolean
   isUpdating: boolean
   isDeleting: boolean
-  isArchiving: boolean
-  isUnarchiving: boolean
 }
 
 export interface FormActions {
-  readItem: () => Promise<void>
-  createItem: () => Promise<void>
-  updateItem: () => Promise<void>
-  deleteItem: () => Promise<void>
-  archiveItem: () => Promise<void>
-  unarchiveItem: () => Promise<void>
+  /** Runs the operation with this `key`: a built-in one (`create`, ...) or a custom one. */
+  runOperation: (key: string) => Promise<void>
+  isRunning: (key: string) => boolean
   /** Sets one value, marks the field touched, updates `dirty` and clears that field's error. */
-  setValue: (name: string, value: unknown) => void
+  setFieldValue: (name: string, value: unknown) => void
   setFieldError: (name: string, message: string | null) => void
+  /** Replaces all field errors with `errors`; the old ones are dropped. */
   setFieldErrors: (errors: FieldErrors) => void
   clearErrors: () => void
   /** Back to the field defaults (create mode) or the last loaded values (update mode). */
-  resetForm: () => void
+  reset: () => void
   /** Runs setup again: reads the item in update mode, loads the defaults in create mode. */
   refresh: () => void
 }
 
-/** State plus actions: what every slot / render prop gets as `context`. */
-export type FormContext<Schema = unknown> = FormState<Schema> & FormActions
+export type FormContext = FormState & FormActions
 
-export type ItemHandler<Schema = unknown> = (state: FormState<Schema>) => Promise<ItemResponse>
+export type ItemHandler = (state: FormState) => Promise<OperationResponse>
 
-/** Options that can be set once for the app and overridden per form. */
-/**
- * Options that can be set once for the app and overridden per form. Written as methods so options
- * typed for one schema library (for example `FormOptions<ZodObject>`) can be passed where
- * `FormOptions<unknown>` is expected.
- */
-export interface FormOptions<Schema = unknown> {
-  /** Decides create or update from the item id. */
-  resolveMode(input: { itemId?: string | number }): FormMode
-  /** Turns your schema (Zod, Yup, an array, ...) into the list of fields. */
-  schemaToFields(schema: Schema | undefined): FieldInput[]
-  /** Runs before `create` and `update`. Throw (or reject) to stop the request. */
-  validateSchema(state: FormState<Schema>): Promise<unknown> | unknown
-  /** Turns any thrown value into a `FormError`. */
-  errorAdapter(error: unknown, state: FormState<Schema>): FormError
-  /** Reads `isArchived` from an item response. */
-  isArchivedItemCheck(response: ItemResponse): boolean
-}
-
-export interface FormPropsBase<Schema = unknown> extends Partial<FormOptions<Schema>> {
-  itemId?: string | number
-  schema?: Schema
-  /** Used instead of `schema` in create mode. */
-  createSchema?: Schema
-  /** Used instead of `schema` in update mode. */
-  updateSchema?: Schema
-  read?: ItemHandler<Schema>
-  create?: ItemHandler<Schema>
-  update?: ItemHandler<Schema>
-  delete?: ItemHandler<Schema>
-  archive?: ItemHandler<Schema>
-  unarchive?: ItemHandler<Schema>
-  /** Free-form data passed through to the handlers in `state.meta`. */
+export interface OperationConfig {
+  /*
+   * `unknown` because every operation may use a different schema type: the library never reads it,
+   * only your `fieldsGenerator` and `schemaValidator` do. When set, `schemaValidator` runs before
+   * the handler; without it, nothing is validated.
+   */
+  schema?: unknown
+  handler: ItemHandler
+  /*
+   * Runs after the response is stored and its `values` are loaded, so `state.response` is the
+   * response.
+   */
+  onSuccess?(state: FormState): void
+  /*
+   * Gets whatever the handler or `schemaValidator` threw. Return an `OperationError` to set `error`
+   * and `fieldErrors`; return nothing to leave them empty.
+   */
+  onError?(error: unknown, state: FormState): OperationError | undefined
+  /** Free-form data for your own use. Read it back from `state.operations`. */
   meta?: Meta
 }
 
-/** Scope of `Form`, `FormFields`, `FormError` and the action buttons. */
-export interface FormScope<Schema = unknown> {
-  context: FormContext<Schema>
+export interface OperationItem extends OperationConfig {
+  /** Unique. `create`, `read`, `update` and `delete` are taken by the built-in operations. */
+  key: string
 }
 
-export interface FormFieldPropsBase {
-  name: string
+/*
+ * The option props are required and written as methods so a function that narrows its argument
+ * (for example `fieldsGenerator({ schema }: { schema: ZodObject | undefined })`) can still be
+ * passed.
+ */
+export interface FormPropsBase {
+  itemId?: string | number
+  create?: OperationConfig
+  read?: OperationConfig
+  update?: OperationConfig
+  delete?: OperationConfig
+  /** Custom operations. Each needs a unique `key`; run one with `runOperation(key)`. */
+  operations?: OperationItem[]
+  /*
+   * Required: the library does not decide which item ids mean create mode.
+   * Example: `{ itemId: '+' }` -> `'create'`, `{ itemId: '12' }` -> `'update'`
+   */
+  modeDetector(input: { itemId?: string | number }): FormMode
+  fieldsGenerator(input: { schema: unknown }): Field[]
+  /*
+   * Runs before the handler of an operation that has a `schema`. Throw (or reject) to stop the
+   * request.
+   */
+  schemaValidator(state: FormState, operation: OperationItem): Promise<unknown>
 }
 
-/** Scope of `FormField`: the context plus what it computes for one field. */
-export interface FieldScope<Schema = unknown> extends FormScope<Schema> {
-  field: Field
-  name: string
-  label: string
-  value: unknown
-  error: string | null
-  /** Sets this field's value (`setValue` bound to the field name). */
-  updateValue: (value: unknown) => void
+export interface FormScope {
+  context: FormContext
+}
+
+export interface OperationScope extends FormScope {
+  run: () => Promise<void>
+}
+
+export interface OperationPropsBase {
+  operation: string
 }
