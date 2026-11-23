@@ -5,6 +5,7 @@
     :create="create"
     :update="update"
     :delete="delete"
+    :operations="operations"
     :mode-detector="modeDetector"
     :fields-generator="fieldsGenerator"
     :schema-validator="schemaValidator"
@@ -27,7 +28,7 @@ import {
 } from '@shilp.dev/vue-form'
 import type { ZodObject } from 'zod'
 
-defineProps<Pick<FormProps, 'itemId' | 'read' | 'create' | 'update' | 'delete'>>()
+defineProps<Pick<FormProps, 'itemId' | 'read' | 'create' | 'update' | 'delete' | 'operations'>>()
 
 /*
  * `+` in the URL is the "new user" id, so it means create mode like a missing id.

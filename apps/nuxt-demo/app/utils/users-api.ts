@@ -9,14 +9,15 @@ export interface User {
   name: string
   email: string
   role: string
+  isArchived: boolean
 }
 
 const DELAY = 400
 
 const users: User[] = [
-  { id: 1, name: 'Aarav Shah', email: 'aarav@example.com', role: 'admin' },
-  { id: 2, name: 'Diya Mehta', email: 'diya@example.com', role: 'editor' },
-  { id: 3, name: 'Kabir Rao', email: 'kabir@example.com', role: 'viewer' },
+  { id: 1, name: 'Aarav Shah', email: 'aarav@example.com', role: 'admin', isArchived: false },
+  { id: 2, name: 'Diya Mehta', email: 'diya@example.com', role: 'editor', isArchived: false },
+  { id: 3, name: 'Kabir Rao', email: 'kabir@example.com', role: 'viewer', isArchived: false },
 ]
 
 let nextId = users.length + 1
@@ -69,6 +70,7 @@ export async function createUser(values: Values): Promise<User> {
     name: String(values.name),
     email: String(values.email),
     role: String(values.role),
+    isArchived: false,
   }
   users.push(user)
   return { ...user }
@@ -86,4 +88,11 @@ export async function deleteUser(id: unknown): Promise<void> {
   await wait()
   const user = findUser(id)
   users.splice(users.indexOf(user), 1)
+}
+
+export async function setUserArchived(id: unknown, isArchived: boolean): Promise<User> {
+  await wait()
+  const user = findUser(id)
+  user.isArchived = isArchived
+  return { ...user }
 }

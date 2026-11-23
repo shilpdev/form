@@ -16,6 +16,7 @@
         :create="createOperation"
         :update="updateOperation"
         :delete="deleteOperation"
+        :operations="customOperations"
       >
         <template #default="{ context }">
           <UCard>
@@ -25,6 +26,9 @@
                   {{ context.isCreateMode ? 'New user' : 'Edit user' }}
                 </h1>
                 <span v-if="context.isReading" class="text-sm text-muted">Loading...</span>
+                <span v-if="context.response?.isArchived" class="text-sm text-muted">
+                  Archived
+                </span>
               </div>
             </template>
 
@@ -85,6 +89,32 @@
                     @click="run"
                   />
                 </FormDelete>
+                <FormOperation
+                  v-if="context.isUpdateMode && !context.isReading && !context.response?.isArchived"
+                  v-slot="{ context: scope, run }"
+                  operation="archive"
+                >
+                  <UButton
+                    color="warning"
+                    variant="outline"
+                    :loading="scope.isRunning('archive')"
+                    :disabled="scope.isLoading"
+                    label="Archive"
+                    @click="run"
+                  />
+                </FormOperation>
+                <FormOperation
+                  v-if="context.isUpdateMode && context.response?.isArchived"
+                  v-slot="{ context: scope, run }"
+                  operation="restore"
+                >
+                  <UButton
+                    :loading="scope.isRunning('restore')"
+                    :disabled="scope.isLoading"
+                    label="Restore"
+                    @click="run"
+                  />
+                </FormOperation>
               </div>
 
               <pre class="overflow-auto rounded-md bg-elevated p-3 text-xs">{{
@@ -109,12 +139,14 @@ import {
   FormError,
   FormField,
   FormFields,
+  FormOperation,
   FormUpdate,
   type OperationConfig,
   type OperationError,
+  type OperationItem,
   type OperationResponse,
 } from '@shilp.dev/vue-form'
-import { createUser, deleteUser, readUser, updateUser } from '~/utils/users-api'
+import { createUser, deleteUser, readUser, setUserArchived, updateUser } from '~/utils/users-api'
 import { ROLES, userSchema } from '~/utils/user-schema'
 
 const route = useRoute()
@@ -139,8 +171,8 @@ function onError(error: unknown): OperationError {
 const readOperation: OperationConfig = {
   onError,
   handler: async (state): Promise<OperationResponse> => {
-    const { id, name, email, role } = await readUser(state.itemId)
-    return { values: { name, email, role }, id }
+    const { id, name, email, role, isArchived } = await readUser(state.itemId)
+    return { values: { name, email, role }, id, isArchived }
   },
 }
 
@@ -151,8 +183,8 @@ const createOperation: OperationConfig = {
     navigateTo(`/users/${state.response!.id}`)
   },
   handler: async (state): Promise<OperationResponse> => {
-    const { id, name, email, role } = await createUser(state.values)
-    return { values: { name, email, role }, id }
+    const { id, name, email, role, isArchived } = await createUser(state.values)
+    return { values: { name, email, role }, id, isArchived }
   },
 }
 
@@ -160,8 +192,8 @@ const updateOperation: OperationConfig = {
   schema: userSchema,
   onError,
   handler: async (state): Promise<OperationResponse> => {
-    const { id, name, email, role } = await updateUser(state.itemId, state.values)
-    return { values: { name, email, role }, id }
+    const { id, name, email, role, isArchived } = await updateUser(state.itemId, state.values)
+    return { values: { name, email, role }, id, isArchived }
   },
 }
 
@@ -173,4 +205,27 @@ const deleteOperation: OperationConfig = {
     return {}
   },
 }
+
+function createArchiveOperation(key: 'archive' | 'restore', isArchived: boolean): OperationItem {
+  return {
+    key,
+    onError,
+    onSuccess: () => {
+      void navigateTo('/')
+    },
+    handler: async (state): Promise<OperationResponse> => {
+      const user = await setUserArchived(state.itemId, isArchived)
+      return {
+        id: user.id,
+        isArchived: user.isArchived,
+        values: { name: user.name, email: user.email, role: user.role },
+      }
+    },
+  }
+}
+
+const customOperations = [
+  createArchiveOperation('archive', true),
+  createArchiveOperation('restore', false),
+]
 </script>
