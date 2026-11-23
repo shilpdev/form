@@ -18,6 +18,7 @@ import {
   resolveSchema,
   generateFieldErrors,
   toggleDirty,
+  warnIfInvalidMode,
 } from '@shared/utils'
 import { useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { FormContextProvider } from '../context/form-context'
@@ -75,6 +76,10 @@ export function Form(props: FormProps) {
   } = props
 
   const mode = modeDetector({ itemId })
+  // In an effect so an invalid mode warns once per change, not on every render.
+  useEffect(() => {
+    warnIfInvalidMode(mode)
+  }, [mode])
   const isCreateMode = mode === 'create'
   const isUpdateMode = mode === 'update'
   const targetSchema = resolveSchema(mode, { create, update })

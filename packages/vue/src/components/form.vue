@@ -26,6 +26,7 @@ import {
   generateFieldErrors,
   resolveSchema,
   toggleDirty,
+  warnIfInvalidMode,
 } from '@shared/utils'
 import { computed, provide, reactive, ref, toRaw, toRefs, watch } from 'vue'
 
@@ -72,6 +73,9 @@ const operations = computed(() => {
 const mode = computed(() => {
   return props.modeDetector({ itemId: props.itemId })
 })
+
+// Watched so an invalid mode warns once per change, as in React.
+watch(mode, warnIfInvalidMode, { immediate: true })
 
 const isCreateMode = computed(() => {
   return mode.value === 'create'

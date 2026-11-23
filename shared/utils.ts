@@ -1,4 +1,5 @@
 import equal from 'fast-deep-equal'
+import { getInvalidModeMessage } from './constants/messages'
 import type {
   Field,
   FieldErrors,
@@ -128,4 +129,15 @@ export const getInputValue = (input: unknown): unknown => {
     return target.checked
   }
   return target.value
+}
+
+export const isFormMode = (value: unknown): value is FormMode => {
+  return value === 'create' || value === 'update'
+}
+
+/* `modeDetector` is user code, so its return value is checked at runtime as well as by the type. */
+export const warnIfInvalidMode = (mode: unknown): void => {
+  if (!isFormMode(mode)) {
+    console.warn(getInvalidModeMessage(mode))
+  }
 }

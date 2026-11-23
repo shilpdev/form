@@ -117,7 +117,7 @@ There is no global setup. The options are required props of `Form`. To share the
 
 | Option | Signature | What it does |
 | ------ | --------- | ------------ |
-| `modeDetector` | `({ itemId }) => 'create' \| 'update'` | Decides which item ids mean create (for example `undefined` or `'+'`) |
+| `modeDetector` | `({ itemId }) => 'create' \| 'update'` | Decides which item ids mean create (for example `undefined` or `'+'`). Any other return value logs a warning and is treated as `'update'` |
 | `fieldsGenerator` | `({ schema }) => Field[]` | Turns the schema of the current mode into `{ name, label, value? }` fields |
 | `schemaValidator` | `(state, operation) => Promise`, reject to stop | Runs before the handler of every operation that has a `schema`. `operation` is the one being run, so read its `schema` there |
 

@@ -24,3 +24,8 @@ export const getDuplicateOperationKeyMessage = (key: string): string => {
 export const getFieldNotFoundMessage = (name: string): string => {
   return `Field "${name}" not found in the schema`
 }
+
+/** Warned when `modeDetector` returns something other than `'create'` or `'update'`. */
+export const getInvalidModeMessage = (mode: unknown): string => {
+  return `modeDetector returned "${String(mode)}". Expected 'create' or 'update'; any other value is treated as 'update'.`
+}

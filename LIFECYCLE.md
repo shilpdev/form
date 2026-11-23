@@ -36,7 +36,7 @@ sequenceDiagram
 ### 1. Setup
 
 - The options (`modeDetector`, `fieldsGenerator`, `schemaValidator`) are required props of `Form`; there are no defaults.
-- `modeDetector({ itemId })` sets the mode. It is a required prop and has no default.
+- `modeDetector({ itemId })` sets the mode. It is a required prop and has no default. If it returns anything other than `'create'` or `'update'`, a warning is logged (once per change of the mode) and the value is treated as `'update'`.
 - The schema in use is `create.schema` in create mode and `update.schema` in update mode. `fieldsGenerator` turns it into fields (`{ name, label, value? }`).
 - Update mode: `runOperation('read')` runs (step 2 without validation). Create mode: `values` are the field defaults (`field.value`, or `null`), and `touched` and `dirty` are emptied.
 - Setup runs again whenever `itemId` changes, and on `refresh()`. Only `refresh()` first clears `response` and `error`; setup itself leaves them as they are. In React it runs in an effect, so React StrictMode reads twice in development.
