@@ -1,6 +1,6 @@
 # Vue Form
 
-Headless CRUD forms for Vue: read, create, update, delete an item from one schema, with your own markup.
+Headless CRUD form for Vue: read, create, update and delete an item with your own markup and any schema library.
 
 Use it for admin panels, dashboards and any create or edit screen backed by an API.
 
@@ -12,13 +12,13 @@ Use it for admin panels, dashboards and any create or edit screen backed by an A
 
 Looking for React? Try [`@shilp.dev/react-form`](https://www.npmjs.com/package/@shilp.dev/react-form), which has the same API.
 
-## Visit [Shilp Form](https://7span.com/open-source/vue-form/) for docs, guides, API and more!
+## Visit [Shilp Form](https://github.com/shilpdev/form) for docs, guides, API and more!
 
 ## Quick Features
 
 - Headless: you write all the markup, and nothing is styled for you
 - One component for create and edit, picked from the item id
-- Works with any schema library (Zod, Yup, Valibot, a plain array)
+- Works with any schema library (Zod, Yup, Valibot) through `fieldsGenerator` and `schemaValidator`
 - Works with any backend: every operation's handler returns a promise
 - Options are props of `Form`; wrap it once and reuse the wrapper
 - Values, initial values, dirty and touched tracking

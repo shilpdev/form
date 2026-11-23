@@ -8,7 +8,7 @@ pnpm monorepo (pnpm 11.9, Node 22) for `@shilp.dev/react-form` and `@shilp.dev/v
 
 ## Product context
 
-From the 7Span docs (https://7span.com/open-source/vue-form/ and https://7span.com/open-source/react-form/). These describe the older `@7span/vue-form` 4.x and `@7span/react-form` 1.x, so props and methods differ from the code; the purpose is the same:
+The official link is https://github.com/shilpdev/form. These packages grew out of the older `@7span/vue-form` 4.x and `@7span/react-form` 1.x, so props and methods differ from those; the purpose is the same:
 
 - Generates forms from a schema (for example Zod) through two adapters: `fieldsGenerator` and `schemaValidator`.
 - One component handles create and edit. The mode comes from the item id (`modeDetector`, a required prop).
@@ -16,7 +16,7 @@ From the 7Span docs (https://7span.com/open-source/vue-form/ and https://7span.c
 - **Configuration by wrapper:** there is no global setup. Options are props of the root `Form`; a consumer who wants them everywhere writes a wrapper component and reuses it (the demo apps have `AppForm`).
 - Created by 7Span.
 
-Treat the code and the `shared/` types as the source of truth for the current API; use the docs only for intent.
+Treat the code and the `shared/` types as the source of truth for the current API.
 
 ## Layout
 

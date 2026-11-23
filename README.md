@@ -1,19 +1,19 @@
 # Shilp Form
 
-Headless CRUD form components for React and Vue. Point a `Form` at an item id and a schema, give each of `read`, `create`, `update` and `delete` an operation (a handler, and optionally a schema and callbacks), and it handles the mode, the values, dirty and touched tracking, validation, loading flags and errors. You write all the markup.
+Headless CRUD form components for React and Vue. Point a `Form` at an item id, give each of `read`, `create`, `update` and `delete` an operation (a handler, and optionally a schema and callbacks), plus `modeDetector`, `fieldsGenerator` and `schemaValidator`, and it handles the mode, the values, dirty and touched tracking, validation, loading flags and errors. You write all the markup.
 
 | Package | npm | Framework |
 | ------- | --- | --------- |
 | [`@shilp.dev/react-form`](./packages/react) | [![npm](https://img.shields.io/npm/v/@shilp.dev/react-form.svg)](https://www.npmjs.com/package/@shilp.dev/react-form) | React 19 |
 | [`@shilp.dev/vue-form`](./packages/vue) | [![npm](https://img.shields.io/npm/v/@shilp.dev/vue-form.svg)](https://www.npmjs.com/package/@shilp.dev/vue-form) | Vue 3.5 |
 
-Both packages have the same API: the same component names, props, state keys, actions, defaults, default markup and default text. They grew out of [`@7span/react-form`](https://7span.com/open-source/react-form/) and [`@7span/vue-form`](https://7span.com/open-source/vue-form/).
+Both packages have the same API: the same component names, props, state keys, actions, defaults, default markup and default text. They grew out of `@7span/react-form` and `@7span/vue-form`.
 
 ## Features
 
 - Headless: render props in React, scoped slots in Vue, and nothing is styled for you
 - One component for create and edit: the mode comes from the item id (`+` or no id means create)
-- Works with any schema library (Zod, Yup, Valibot, a plain array) through `fieldsGenerator` and `schemaValidator`
+- Works with any schema library (Zod, Yup, Valibot) through `fieldsGenerator` and `schemaValidator`
 - Works with any backend: every operation's `handler` returns a promise
 - `onSuccess` and `onError` callbacks per operation
 - Options are props of `Form`: write one wrapper component, reuse it everywhere
